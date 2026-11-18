@@ -64,6 +64,9 @@
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
   background: var(--bg);
   background-image: radial-gradient(1200px 500px at 50% -200px, var(--bg-2), transparent);
   background-attachment: fixed;
@@ -385,3 +388,10 @@ button { font: inherit; color: inherit; }
   .topnav { overflow-x: auto; max-width: 70vw; scrollbar-width: none; }
   .sections .section { padding: 4px 9px; font-size: 13px; }
 }
+
+/* Form fields stay selectable so typing/search still works. */
+input, textarea, select, [contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+img { -webkit-user-drag: none; }
