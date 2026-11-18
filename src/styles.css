@@ -363,13 +363,13 @@ button { font: inherit; color: inherit; }
 .prapti { max-width: 760px; margin: 0 auto; }
 .prapti-hero h1 { margin: 6px 0; }
 .prapti-series { margin: 4px 0 0; color: var(--muted); font-weight: 600; }
-.prapti-intro { line-height: 1.8; margin: 16px 0; }
+.prapti-intro { line-height: 1.8; margin: 16px 0; white-space: pre-line; }
 .prapti-h { font-size: 20px; margin: 26px 0 10px; }
 .prasangs { list-style: none; padding: 0; margin: 0; counter-reset: p; display: grid; gap: 14px; }
 .prasang { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; counter-increment: p; }
 .prasang h3 { margin: 0 0 8px; font-size: 17px; }
 .prasang h3::before { content: counter(p) ". "; color: var(--primary); }
-.prasang p { margin: 0; line-height: 1.8; }
+.prasang p { margin: 0; line-height: 1.8; white-space: pre-line; }
 .prasang .prasang-lesson { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border); color: var(--primary); font-weight: 600; }
 .vichar-list { line-height: 1.9; padding-left: 22px; }
 .prapti-timer { margin: 22px 0; padding: 22px; text-align: center; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
