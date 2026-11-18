@@ -383,7 +383,9 @@ button { font: inherit; color: inherit; }
 .timer-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .prapti-done { margin: 14px 0 0; font-weight: 700; color: var(--primary); }
 .prapti-source { color: var(--muted); font-size: 13px; }
-.prapti-archive ul { padding-left: 20px; line-height: 1.9; }
+.prapti-tabs { margin-bottom: 14px; }
+.prapti-tabs .chip { text-decoration: none; }
+.prapti-tabs .chip.disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 640px) {
   .topnav { overflow-x: auto; max-width: 70vw; scrollbar-width: none; }
   .sections .section { padding: 4px 9px; font-size: 13px; }

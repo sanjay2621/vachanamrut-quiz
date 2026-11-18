@@ -10,10 +10,23 @@ export function todayKey(d = new Date()) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
 
-// Entry for a date: exact match, else the latest one on or before it, else the newest
+// Each entry covers from..to (inclusive). Older entries may only have `date`.
+const fromOf = (d) => d.from || d.date;
+const toOf = (d) => d.to || d.from || d.date;
+
+// Entries newest first
+const sortRanges = (days) => [...days].sort((a, b) => fromOf(b).localeCompare(fromOf(a)));
+
+// Entry for a date: the range containing it (or starting on it), else the
+// latest one starting before it, else the newest
+// Entries with `disabled: true` (content not ready yet) show as a greyed tab and are never opened.
 export function pickDay(days, date) {
-  const sorted = [...days].sort((a, b) => b.date.localeCompare(a.date));
-  return sorted.find((d) => d.date === date) || sorted.find((d) => d.date <= date) || sorted[0];
+  const sorted = sortRanges(days).filter((d) => !d.disabled);
+  return (
+    sorted.find((d) => fromOf(d) <= date && date <= toOf(d)) ||
+    sorted.find((d) => fromOf(d) <= date) ||
+    sorted[0]
+  );
 }
 
 function Timer({ dateKey }) {
@@ -74,18 +87,46 @@ function Timer({ dateKey }) {
 export default function Prapti({ prapti, date }) {
   const { t, lang } = useLang();
   if (!prapti) return <div className="center-msg">{t('loading')}</div>;
-  const key = date || todayKey();
-  const day = pickDay(prapti.days, key);
+  const today = todayKey();
+  const day = pickDay(prapti.days, date || today);
   if (!day) return <div className="center-msg">{t('nothingFound')}</div>;
-  const others = [...prapti.days].filter((d) => d.date !== day.date).sort((a, b) => b.date.localeCompare(a.date));
-  const dateLabel = new Date(`${day.date}T00:00:00`).toLocaleDateString(lang === 'gu' ? 'gu-IN' : 'en-GB', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
+  const ranges = sortRanges(prapti.days);
+  const locale = lang === 'gu' ? 'gu-IN' : 'en-GB';
+  const fmt = (k, opts) => new Date(`${k}T00:00:00`).toLocaleDateString(locale, opts);
+  const rangeLabel = (d, long) => {
+    const f = fromOf(d);
+    const e = toOf(d);
+    const opts = long ? { day: 'numeric', month: 'long', year: 'numeric' } : { day: 'numeric', month: 'short' };
+    return f === e ? fmt(f, opts) : `${fmt(f, opts)} – ${fmt(e, opts)}`;
+  };
+  const isCurrent = (d) => fromOf(d) <= today && today <= toOf(d);
+  // Timer completion is per day: today while the range is current, else the range's first day
+  const doneKey = isCurrent(day) ? today : fromOf(day);
 
   return (
     <div className="prapti">
+      {ranges.length > 0 && (
+        <div className="chips prapti-tabs" role="tablist" aria-label={t('praptiRanges')}>
+          {ranges.map((d) => d.disabled ? (
+            <span key={fromOf(d)} role="tab" aria-disabled="true" className="chip disabled" title={t('praptiSoon')}>
+              {rangeLabel(d, false)} · {t('praptiSoon')}
+            </span>
+          ) : (
+            <a
+              key={fromOf(d)}
+              role="tab"
+              aria-selected={d === day}
+              className={d === day ? 'chip on' : 'chip'}
+              href={`#/prapti/${fromOf(d)}`}
+            >
+              {rangeLabel(d, false)}{isCurrent(d) ? ` · ${t('praptiNow')}` : ''}
+            </a>
+          ))}
+        </div>
+      )}
+
       <section className="hero prapti-hero">
-        <p className="hero-kicker">{t('praptiKicker')} · {dateLabel}</p>
+        <p className="hero-kicker">{t('praptiKicker')} · {rangeLabel(day, true)}</p>
         {day.series && <p className="prapti-series">{day.series}</p>}
         <h1>{day.title}</h1>
         {day.subtitle && <p className="hero-sub">{day.subtitle}</p>}
@@ -111,20 +152,9 @@ export default function Prapti({ prapti, date }) {
         {day.vichar.map((v, i) => <li key={i}>{v}</li>)}
       </ul>
 
-      <Timer key={day.date} dateKey={day.date} />
+      <Timer key={doneKey} dateKey={doneKey} />
 
       {day.source && <p className="prapti-source">{t('praptiSource')} {day.source}</p>}
-
-      {others.length > 0 && (
-        <section className="prapti-archive">
-          <h2 className="prapti-h">{t('praptiArchive')}</h2>
-          <ul>
-            {others.map((d) => (
-              <li key={d.date}><a href={`#/prapti/${d.date}`}>{d.date} — {d.title}</a></li>
-            ))}
-          </ul>
-        </section>
-      )}
     </div>
   );
 }

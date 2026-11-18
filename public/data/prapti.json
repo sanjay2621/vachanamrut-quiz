@@ -1,8 +1,9 @@
 {
-  "_note": "Daily પ્રાપ્તિનો વિચાર entries (static). Add a new object per day; the page shows today's entry, or the latest one before today. Prasang text is quoted from the source book/article named in `source`; paragraphs are separated by \\n.",
+  "_note": "પ્રાપ્તિનો વિચાર entries (static). Each entry covers a date range: from/to (yyyy-mm-dd, inclusive, normally 3 days). Never replace old entries — append a new object for the next range; each range gets its own tab. The page opens on the range containing today, else the latest earlier one. Prasang text is quoted from the source named in source; paragraphs are separated by \n.",
   "days": [
     {
-      "date": "2026-11-18",
+      "from": "2026-11-18",
+      "to": "2026-11-20",
       "series": "સદ્‌ગુણ-સિંધુનું આચમનઃ ૧",
       "title": "ધીર અને સ્થિર…",
       "subtitle": "એવા સંતને નામું હું શીશ…",
@@ -41,6 +42,11 @@
         "આ પ્રાપ્તિનો આનંદ અખંડ રહે તે માટે આજે ૧૫ મિનિટ શાંતિથી મહારાજ અને સ્વામીનું ચિંતવન કરીશ."
       ],
       "source": "સદ્‌ગુણ-સિંધુનું આચમનઃ ૧ — ‘ધીર અને સ્થિર…’ (પાન ૩૫–૩૮)"
+    },
+    {
+      "from": "2026-11-21",
+      "to": "2026-11-23",
+      "disabled": true
     }
   ]
 }

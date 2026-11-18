@@ -9,7 +9,7 @@ import { LangContext, makeT } from './i18n.js';
 
 // Hash routes: #/  #/home/titles  #/home/topics  #/home/study  #/home/subject  #/quiz/<id>  #/practice/<sectionId|all>  #/titles
 //              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>
-//              #/prapti  #/prapti/<yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section)
+//              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
   return { page: parts[0] || 'home', arg: parts[1] || null };
