@@ -7,7 +7,14 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "generate": "node scripts/generate-quizzes.mjs"
+    "generate": "node scripts/generate-quizzes.mjs",
+    "fetch-text": "node scripts/fetch-fulltext.mjs",
+    "import-subjects": "node scripts/import-subjects.mjs",
+    "tag-subjects": "node scripts/tag-subjects.mjs",
+    "build-extra": "node scripts/build-extra-source.mjs",
+    "build-en": "node scripts/build-en-source.mjs",
+    "build-study": "node scripts/build-study-source.mjs",
+    "build-askers": "node scripts/build-askers.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

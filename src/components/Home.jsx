@@ -1,64 +1,99 @@
 import { useMemo, useState } from 'react';
 import { getScores } from '../storage.js';
-
-const toGu = (n) => String(n).replace(/\d/g, (d) => '૦૧૨૩૪૫૬૭૮૯'[d]);
+import { useLang } from '../i18n.js';
 
 export default function Home({ data, mode = 'quiz' }) {
+  const { t, num } = useLang();
   const [section, setSection] = useState('all');
+  const [subjectFilter, setSubjectFilter] = useState('all');
   const scores = useMemo(() => getScores(), []);
 
-  const isTitles = mode === 'titles';
-  const quizzes = data.quizzes.filter((q) => (q.kind === 'titles') === isTitles);
-  const titleQuizCount = data.quizzes.filter((q) => q.kind === 'titles').length;
+  // Quiz kinds: knowledge ('quiz', no kind field), 'titles', 'topics', 'study', 'subject'
+  const kindOf = (q) => q.kind || 'quiz';
+  const quizzes = data.quizzes.filter((q) => kindOf(q) === mode);
+  const countOf = (k) => data.quizzes.filter((q) => kindOf(q) === k).length;
+  const MODES = [
+    { id: 'quiz', href: '#/', label: 'knowledgeQuiz', sub: 'heroSubQuiz' },
+    { id: 'titles', href: '#/home/titles', label: 'titleQuiz', sub: 'heroSubTitles' },
+    { id: 'topics', href: '#/home/topics', label: 'topicQuiz', sub: 'heroSubTopics' },
+    { id: 'study', href: '#/home/study', label: 'studyQuiz', sub: 'heroSubStudy' },
+    { id: 'subject', href: '#/home/subject', label: 'subjectQuizTab', sub: 'heroSubSubject' },
+  ];
+  const current = MODES.find((m) => m.id === mode) || MODES[0];
   const totalQ = quizzes.reduce((a, q) => a + q.questions.length, 0);
   const done = quizzes.filter((q) => scores[q.id]).length;
-  const visible = quizzes.filter((q) => section === 'all' || q.section === section);
+  // Subject quizzes are filtered by subject instead of by section
+  const isSubject = mode === 'subject';
+  const subjById = Object.fromEntries((data.subjects || []).map((x) => [x.id, x]));
+  const quizSubjects = (data.subjects || []).filter((x) => quizzes.some((q) => q.subject === x.id));
+  const visible = isSubject
+    ? quizzes.filter((q) => subjectFilter === 'all' || q.subject === subjectFilter)
+    : quizzes.filter((q) => section === 'all' || q.section === section);
   const secById = Object.fromEntries(data.sections.map((s) => [s.id, s]));
   const refByNo = Object.fromEntries(data.vachanamruts.map((v) => [v.vachno, v.ref]));
 
   return (
     <>
       <section className="hero">
-        <p className="hero-kicker">॥ ભગવાન સ્વામિનારાયણનાં વચનામૃત ॥</p>
-        <h1>વચનામૃત જ્ઞાન ક્વિઝ</h1>
-        <p className="hero-sub">
-          {isTitles
-            ? `દરેક પ્રકરણના દરેક વચનામૃતનું શીર્ષક ઓળખો — ${toGu(262)} વચનામૃત, દરેકનો એક પ્રશ્ન.`
-            : `${toGu(262)} વચનામૃતનાં શીર્ષક, તિથિ, ઉપદેશ અને પ્રશ્નકર્તા પર આધારિત બહુવિકલ્પ પ્રશ્નો.`}
-        </p>
+        <p className="hero-kicker">{t('heroKicker')}</p>
+        <h1>{t('heroTitle')}</h1>
+        <p className="hero-sub">{t(current.sub, { n: data.vachanamruts.length })}</p>
         <div className="stats">
-          <div><strong>{toGu(262)}</strong><span>વચનામૃત</span></div>
-          <div><strong>{toGu(quizzes.length)}</strong><span>ક્વિઝ</span></div>
-          <div><strong>{toGu(totalQ)}</strong><span>પ્રશ્નો</span></div>
-          <div><strong>{toGu(done)}</strong><span>પૂર્ણ</span></div>
+          <div><strong>{num(data.vachanamruts.length)}</strong><span>{t('statVach')}</span></div>
+          <div><strong>{num(quizzes.length)}</strong><span>{t('statQuiz')}</span></div>
+          <div><strong>{num(totalQ)}</strong><span>{t('statQuestions')}</span></div>
+          <div><strong>{num(done)}</strong><span>{t('statDone')}</span></div>
         </div>
         <div className="hero-actions">
-          {!isTitles && (
+          {mode === 'quiz' && (
             <a className="btn btn-primary" href={`#/practice/${section}`}>
-              ઝડપી અભ્યાસ (૨૦ પ્રશ્નો)
+              {t('quickPractice')}
             </a>
           )}
-          <a className="btn btn-ghost" href="#/titles">વચનામૃત સૂચિ જુઓ</a>
+          <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">
           <div className="overall-bar"><span style={{ width: `${(done / quizzes.length) * 100}%` }} /></div>
-          <small>કુલ પ્રગતિ: {toGu(done)} / {toGu(quizzes.length)} ક્વિઝ</small>
+          <small>{t('progress', { a: done, b: quizzes.length })}</small>
         </div>
       </section>
 
-      <nav className="modes" aria-label="ક્વિઝ પ્રકાર">
-        <a className={!isTitles ? 'mode on' : 'mode'} aria-current={!isTitles ? 'page' : undefined} href="#/">
-          જ્ઞાન ક્વિઝ
-        </a>
-        <a className={isTitles ? 'mode on' : 'mode'} aria-current={isTitles ? 'page' : undefined} href="#/home/titles">
-          શીર્ષક ક્વિઝ
-          <span className="chip-count">{toGu(titleQuizCount)}</span>
-        </a>
+      <nav className="modes" aria-label={t('quizTypes')}>
+        {MODES.map((m) => (
+          <a
+            key={m.id}
+            className={m.id === current.id ? 'mode on' : 'mode'}
+            aria-current={m.id === current.id ? 'page' : undefined}
+            href={m.href}
+          >
+            {t(m.label)}
+            {m.id !== 'quiz' && <span className="chip-count">{num(countOf(m.id))}</span>}
+          </a>
+        ))}
       </nav>
 
-      <div className="chips" role="tablist" aria-label="પ્રકરણ પસંદ કરો">
+      {isSubject ? (
+        <div className="chips" role="tablist" aria-label={t('pickSubject')}>
+          <button role="tab" aria-selected={subjectFilter === 'all'} className={subjectFilter === 'all' ? 'chip on' : 'chip'} onClick={() => setSubjectFilter('all')}>
+            {t('all')}
+          </button>
+          {quizSubjects.map((x) => (
+            <button
+              key={x.id}
+              role="tab"
+              aria-selected={subjectFilter === x.id}
+              className={subjectFilter === x.id ? 'chip on' : 'chip'}
+              onClick={() => setSubjectFilter(x.id)}
+            >
+              {x.name}
+              <span className="chip-count">{num(x.vachnos.length)}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+      <div className="chips" role="tablist" aria-label={t('pickSection')}>
         <button role="tab" aria-selected={section === 'all'} className={section === 'all' ? 'chip on' : 'chip'} onClick={() => setSection('all')}>
-          બધા
+          {t('all')}
         </button>
         {data.sections.map((s) => (
           <button
@@ -69,29 +104,28 @@ export default function Home({ data, mode = 'quiz' }) {
             onClick={() => setSection(s.id)}
           >
             {s.name}
-            <span className="chip-count">{toGu(s.to - s.from + 1)}</span>
+            <span className="chip-count">{num(s.count)}</span>
           </button>
         ))}
       </div>
+      )}
 
       <section className="grid">
         {visible.map((q) => {
           const sc = scores[q.id];
-          const sec = secById[q.section];
+          const label = isSubject ? subjById[q.subject]?.name : secById[q.section]?.name;
           return (
-            <a key={q.id} href={`#/quiz/${q.id}`} className={`card sec-${q.section}`}>
+            <a key={q.id} href={`#/quiz/${q.id}`} className={`card sec-${q.section || 'subject'}`}>
               <div className="card-top">
-                <span className="card-sec">{sec.name}</span>
-                {sc && <span className={`badge ${sc.best >= 80 ? 'good' : sc.best >= 50 ? 'ok' : 'low'}`}>{toGu(sc.best)}%</span>}
+                <span className="card-sec">{label}</span>
+                {sc && <span className={`badge ${sc.best >= 80 ? 'good' : sc.best >= 50 ? 'ok' : 'low'}`}>{num(sc.best)}%</span>}
               </div>
-              <h3>{q.title.split('—')[1]?.trim() || q.title}</h3>
-              <p className="card-meta">
-                {toGu(q.questions.length)} પ્રશ્નો · {toGu(q.covers.length)} વચનામૃત
-              </p>
+              <h3>{isSubject ? q.title : q.title.split('—')[1]?.trim() || q.title}</h3>
+              <p className="card-meta">{t('cardMeta', { q: q.questions.length, v: q.covers.length })}</p>
               <p className="card-range">
                 {refByNo[q.covers[0]]} … {refByNo[q.covers[q.covers.length - 1]]}
               </p>
-              <span className="card-cta">{sc ? 'ફરી રમો →' : 'શરૂ કરો →'}</span>
+              <span className="card-cta">{sc ? t('playAgainCta') : t('startCta')}</span>
             </a>
           );
         })}

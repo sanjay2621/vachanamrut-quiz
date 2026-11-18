@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { saveScore } from '../storage.js';
 import Results from './Results.jsx';
+import { useLang } from '../i18n.js';
 
-const LETTERS = ['ક', 'ખ', 'ગ', 'ઘ'];
-const toGu = (n) => String(n).replace(/\d/g, (d) => '૦૧૨૩૪૫૬૭૮૯'[d]);
+const LETTERS = { gu: ['ક', 'ખ', 'ગ', 'ઘ'], en: ['A', 'B', 'C', 'D'] };
 
 function shuffle(arr) {
   const a = [...arr];
@@ -23,6 +23,7 @@ function prepare(questions) {
 }
 
 export default function Quiz({ quiz, onNewSet }) {
+  const { t, lang } = useLang();
   const [round, setRound] = useState({ questions: quiz.questions, review: false, n: 0 });
   const questions = useMemo(() => prepare(round.questions), [round]);
   const [idx, setIdx] = useState(0);
@@ -92,18 +93,18 @@ export default function Quiz({ quiz, onNewSet }) {
   return (
     <div className="quiz">
       <div className="quiz-head">
-        <a href={quiz.kind === 'titles' ? '#/home/titles' : '#/'} className="back" aria-label="પાછા જાઓ">←</a>
+        <a href={quiz.back || (quiz.kind ? `#/home/${quiz.kind}` : '#/')} className="back" aria-label={t('back')}>←</a>
         <div className="quiz-title">
-          <h2>{round.review ? 'ખોટા જવાબો — પુનરાવર્તન' : quiz.title}</h2>
+          <h2>{round.review ? t('reviewTitle') : quiz.title}</h2>
           <small>
-            પ્રશ્ન {toGu(idx + 1)} / {toGu(questions.length)} · સાચા {toGu(correctCount)}
+            {t('qProgress', { i: idx + 1, n: questions.length, c: correctCount })}
           </small>
         </div>
       </div>
       <div className="progress" aria-hidden="true"><span style={{ width: `${progress}%` }} /></div>
 
       <article className="qcard" key={q.id + idx}>
-        <span className="qtype">{typeLabel(q.type)}</span>
+        <span className="qtype">{t(`type.${q.type}`)}</span>
         <p className="qtext">{q.question}</p>
 
         <div className="options" role="radiogroup">
@@ -123,10 +124,10 @@ export default function Quiz({ quiz, onNewSet }) {
                 role="radio"
                 aria-checked={picked === i}
               >
-                <span className="opt-letter">{LETTERS[i]}</span>
+                <span className="opt-letter">{LETTERS[lang][i]}</span>
                 <span className="opt-text">{opt}</span>
-                {answered && i === q.answer && <span className="opt-mark" aria-label="સાચો">✓</span>}
-                {answered && i === picked && i !== q.answer && <span className="opt-mark" aria-label="ખોટો">✕</span>}
+                {answered && i === q.answer && <span className="opt-mark" aria-label={t('correctMark')}>✓</span>}
+                {answered && i === picked && i !== q.answer && <span className="opt-mark" aria-label={t('wrongMark')}>✕</span>}
               </button>
             );
           })}
@@ -134,34 +135,24 @@ export default function Quiz({ quiz, onNewSet }) {
 
         {answered && (
           <div className={`feedback ${picked === q.answer ? 'ok' : 'bad'}`}>
-            <strong>{picked === q.answer ? 'સરસ! સાચો જવાબ.' : 'ખોટો જવાબ.'}</strong>
+            <strong>{picked === q.answer ? t('correctFb') : t('wrongFb')}</strong>
             <span>
-              વચનામૃત {q.ref} — “{q.title}”.{' '}
-              <a href={q.link} target="_blank" rel="noreferrer">વચનામૃત વાંચો ↗</a>
+              {t('vachRef', { r: q.ref, t: q.title })}{' '}
+              <a href={q.link} target="_blank" rel="noreferrer">{t('readVach')}</a>
             </span>
+            {/* Content questions carry the passage that proves the answer */}
+            {q.evidence && <span className="evidence">{t('evidence')} “{q.evidence}”</span>}
           </div>
         )}
       </article>
 
       <div className="quiz-foot">
-        <span className="hint">કીબોર્ડ: ૧–૪ પસંદ કરો, Enter આગળ</span>
+        <span className="hint">{t('keyHint')}</span>
         <button className="btn btn-primary" onClick={next} disabled={!answered}>
-          {idx + 1 < questions.length ? 'આગળ →' : 'પરિણામ જુઓ'}
+          {idx + 1 < questions.length ? t('next') : t('seeResult')}
         </button>
       </div>
     </div>
   );
 }
 
-function typeLabel(t) {
-  return (
-    {
-      'title-to-ref': 'શીર્ષક પરથી વચનામૃત',
-      'ref-to-title': 'શીર્ષક ઓળખો',
-      'section-title': 'શીર્ષક ઓળખો',
-      date: 'તિથિ',
-      teaching: 'ઉપદેશ',
-      asker: 'પ્રશ્નકર્તા',
-    }[t] || 'પ્રશ્ન'
-  );
-}

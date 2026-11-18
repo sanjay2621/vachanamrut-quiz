@@ -42,3 +42,24 @@ export function getTheme() {
 export function setTheme(theme) {
   writeAll({ ...readAll(), theme });
 }
+
+// Days on which the 15-minute પ્રાપ્તિનો વિચાર timer was completed (yyyy-mm-dd)
+export function isPraptiDone(date) {
+  return (readAll().praptiDone || []).includes(date);
+}
+
+export function setPraptiDone(date) {
+  const data = readAll();
+  const days = new Set(data.praptiDone || []);
+  days.add(date);
+  writeAll({ ...data, praptiDone: [...days] });
+}
+
+// 'gu' (default) or 'en'
+export function getLang() {
+  return readAll().lang === 'en' ? 'en' : 'gu';
+}
+
+export function setLang(lang) {
+  writeAll({ ...readAll(), lang });
+}

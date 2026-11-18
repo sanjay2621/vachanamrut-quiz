@@ -1,44 +1,46 @@
 import { useMemo, useState } from 'react';
+import { useLang } from '../i18n.js';
 
-// Searchable list of all 262 Vachanamrut titles, with the quiz that covers each one
+// Searchable list of all Vachanamrut titles, with the quiz that covers each one
 export default function TitleIndex({ data }) {
+  const { t: tr, link } = useLang();
   const [term, setTerm] = useState('');
 
   const quizFor = useMemo(() => {
     const m = {};
-    for (const q of data.quizzes) for (const v of q.covers) (m[v] ||= []).push(q);
+    for (const q of data.quizzes.filter((x) => x.kind !== 'subject')) for (const v of q.covers) (m[v] ||= []).push(q);
     return m;
   }, [data]);
 
   const t = term.trim();
   const list = data.vachanamruts.filter(
-    (v) => !t || v.title.includes(t) || v.ref.includes(t) || (v.date || '').includes(t)
+    (v) => !t || [v.title, v.ref, v.date || ''].some((x) => x.toLowerCase().includes(t.toLowerCase()))
   );
 
   return (
     <div className="titles">
-      <h1 className="page-h">વચનામૃત સૂચિ</h1>
+      <h1 className="page-h">{tr('titleIndex')}</h1>
       <input
         className="search"
         type="search"
-        placeholder="શીર્ષક અથવા વચનામૃત શોધો… (દા.ત. માયા, લોયા ૧૦)"
+        placeholder={tr('searchTitles')}
         value={term}
         onChange={(e) => setTerm(e.target.value)}
-        aria-label="વચનામૃત શોધો"
+        aria-label={tr('searchTitlesLabel')}
       />
       {data.sections.map((s) => {
-        const items = list.filter((v) => v.vachno >= s.from && v.vachno <= s.to);
+        const items = list.filter((v) => v.section === s.id);
         if (!items.length) return null;
         return (
           <section key={s.id} className="title-sec">
-            <h2>{s.name} <small>{s.en}</small></h2>
+            <h2>{s.name} {s.alt && <small>{s.alt}</small>}</h2>
             <ul>
               {items.map((v) => (
                 <li key={v.vachno}>
                   <span className="t-ref">{v.ref}</span>
                   <span className="t-title">
                     <a
-                      href={`https://www.anirdesh.com/vachanamrut/index.php?format=gu&vachno=${v.vachno}`}
+                      href={link(v.vachno)}
                       target="_blank"
                       rel="noreferrer"
                     >
@@ -59,7 +61,7 @@ export default function TitleIndex({ data }) {
           </section>
         );
       })}
-      {!list.length && <p className="center-msg">કંઈ મળ્યું નહીં.</p>}
+      {!list.length && <p className="center-msg">{tr('nothingFound')}</p>}
     </div>
   );
 }
