@@ -93,7 +93,12 @@ export default function Prapti({ prapti, date }) {
   const today = todayKey();
   const day = pickDay(prapti.days, date || today);
   if (!day) return <div className="center-msg">{t('nothingFound')}</div>;
-  const ranges = sortRanges(prapti.days);
+  // Open ranges newest first (current one leads), then upcoming ones soonest first.
+  const sorted = sortRanges(prapti.days);
+  const ranges = [
+    ...sorted.filter((d) => !isLocked(d, today)),
+    ...sorted.filter((d) => isLocked(d, today)).reverse(),
+  ];
   const locale = lang === 'gu' ? 'gu-IN' : 'en-GB';
   const fmt = (k, opts) => new Date(`${k}T00:00:00`).toLocaleDateString(locale, opts);
   const rangeLabel = (d, long) => {
