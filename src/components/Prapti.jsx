@@ -17,11 +17,14 @@ const toOf = (d) => d.to || d.from || d.date;
 // Entries newest first
 const sortRanges = (days) => [...days].sort((a, b) => fromOf(b).localeCompare(fromOf(a)));
 
+// A range is locked (greyed "coming soon" tab, never opened) until its start
+// date, or always when marked `disabled: true` (content not ready yet).
+export const isLocked = (d, today = todayKey()) => !!d.disabled || fromOf(d) > today;
+
 // Entry for a date: the range containing it (or starting on it), else the
-// latest one starting before it, else the newest
-// Entries with `disabled: true` (content not ready yet) show as a greyed tab and are never opened.
+// latest one starting before it, else the newest — among unlocked ranges only
 export function pickDay(days, date) {
-  const sorted = sortRanges(days).filter((d) => !d.disabled);
+  const sorted = sortRanges(days).filter((d) => !isLocked(d));
   return (
     sorted.find((d) => fromOf(d) <= date && date <= toOf(d)) ||
     sorted.find((d) => fromOf(d) <= date) ||
@@ -107,7 +110,7 @@ export default function Prapti({ prapti, date }) {
     <div className="prapti">
       {ranges.length > 0 && (
         <div className="chips prapti-tabs" role="tablist" aria-label={t('praptiRanges')}>
-          {ranges.map((d) => d.disabled ? (
+          {ranges.map((d) => isLocked(d, today) ? (
             <span key={fromOf(d)} role="tab" aria-disabled="true" className="chip disabled" title={t('praptiSoon')}>
               {rangeLabel(d, false)} · {t('praptiSoon')}
             </span>
