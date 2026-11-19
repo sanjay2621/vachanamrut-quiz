@@ -52,6 +52,11 @@ export default function Home({ data, mode = 'quiz' }) {
               {t('quickPractice')}
             </a>
           )}
+          {mode === 'titles' && quizzes.length > 0 && (
+            <a className="btn btn-primary" href="#/title-mix">
+              {t('titleMix')}
+            </a>
+          )}
           <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">
@@ -116,9 +121,10 @@ export default function Home({ data, mode = 'quiz' }) {
       <section className="grid">
         {visible.map((q) => {
           const sc = scores[q.id];
-          const label = isSubject ? subjById[q.subject]?.name : secById[q.section]?.name;
+          // Mixed title quizzes have no section
+          const label = isSubject ? subjById[q.subject]?.name : secById[q.section]?.name || t('mixLabel');
           return (
-            <a key={q.id} href={`#/quiz/${q.id}`} className={`card sec-${q.section || 'subject'}`}>
+            <a key={q.id} href={`#/quiz/${q.id}`} className={`card sec-${q.section || (isSubject ? 'subject' : 'mix')}`}>
               <div className="card-top">
                 <span className="card-sec">{label}</span>
                 {sc && <span className={`badge ${sc.best >= 80 ? 'good' : sc.best >= 50 ? 'ok' : 'low'}`}>{num(sc.best)}%</span>}
@@ -126,7 +132,9 @@ export default function Home({ data, mode = 'quiz' }) {
               <h3>{isSubject ? q.title : q.title.split('—')[1]?.trim() || q.title}</h3>
               <p className="card-meta">{t('cardMeta', { q: q.questions.length, v: q.covers.length })}</p>
               <p className="card-range">
-                {refByNo[q.covers[0]]} … {refByNo[q.covers[q.covers.length - 1]]}
+                {q.section || isSubject
+                  ? `${refByNo[q.covers[0]]} … ${refByNo[q.covers[q.covers.length - 1]]}`
+                  : t('mixRange')}
               </p>
               <span className="card-cta">{sc ? t('playAgainCta') : t('startCta')}</span>
             </a>

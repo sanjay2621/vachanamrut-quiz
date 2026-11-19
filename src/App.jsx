@@ -10,7 +10,7 @@ import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
 // Hash routes: #/  #/home/titles  #/home/topics  #/home/study  #/home/subject  #/quiz/<id>  #/practice/<sectionId|all>  #/titles
-//              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>
+//              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>  #/title-mix (20 random titles, all sections)
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 //              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
@@ -142,6 +142,21 @@ export default function App() {
         questions: shuffle(pool).slice(0, 20),
       };
     }
+    if (route.page === 'title-mix') {
+      // Mixed title quiz: 20 random title questions across every section (only
+      // from title quizzes that are switched on); unscored like practice.
+      // Section and mixed title quizzes share questions, so dedupe by question id
+      const byId = new Map();
+      for (const q of data.quizzes.filter((x) => x.kind === 'titles')) for (const x of q.questions) byId.set(x.id, x);
+      const pool = [...byId.values()];
+      if (!pool.length) return null;
+      return {
+        id: 'practice-titles-mix',
+        kind: 'titles',
+        title: t('titleMixTitle'),
+        questions: shuffle(pool).slice(0, 20),
+      };
+    }
     if (route.page !== 'practice') return null;
     const sec = data.sections.find((s) => s.id === route.arg);
     const pool = data.quizzes
@@ -182,7 +197,7 @@ export default function App() {
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;
   } else if (route.page === 'subjects') {
     content = <Subjects data={data} subjectId={route.arg} />;
-  } else if (route.page === 'practice' || route.page === 'subject-quiz') {
+  } else if (route.page === 'practice' || route.page === 'subject-quiz' || route.page === 'title-mix') {
     content = practiceQuiz ? (
       <Quiz
         key={`${lang}-${practiceQuiz.id}-${practiceKey}`}

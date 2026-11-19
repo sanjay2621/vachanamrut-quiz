@@ -83,6 +83,7 @@ const LANGS = {
     },
     quizTitle: (sec, i) => `${sec.name} — ક્વિઝ ${i}`,
     titleQuizTitle: (sec, i) => `${sec.name} — શીર્ષક ક્વિઝ ${i}`.trim(),
+    mixTitleQuizTitle: (i) => `સર્વ પ્રકરણ — મિશ્ર શીર્ષક ક્વિઝ ${i}`,
     topicQuizTitle: (sec, i) => `${sec.name} — વાત ક્વિઝ ${i}`.trim(),
     studyQuizTitle: (sec, i) => `${sec.name} — અભ્યાસ ક્વિઝ ${i}`.trim(),
     contentQuizTitle: (sec, i) => `${sec.name} — વિષયવસ્તુ ક્વિઝ ${i}`.trim(),
@@ -121,6 +122,7 @@ const LANGS = {
     },
     quizTitle: (sec, i) => `${sec.en} — Quiz ${i}`,
     titleQuizTitle: (sec, i) => `${sec.en} — Title Quiz ${i}`.trim(),
+    mixTitleQuizTitle: (i) => `All Sections — Mixed Title Quiz ${i}`,
     topicQuizTitle: (sec, i) => `${sec.en} — Topic Quiz ${i}`.trim(),
     studyQuizTitle: (sec, i) => `${sec.en} — Study Quiz ${i}`.trim(),
     contentQuizTitle: (sec, i) => `${sec.en} — Content Quiz ${i}`.trim(),
@@ -437,6 +439,27 @@ function build(lang) {
   }
   quizzes.push(...contentQuizzes);
 
+  // Mixed title quizzes: the same one-per-Vachanamrut title questions, shuffled across
+  // all sections and chunked into ~QUIZ_SIZE. No section (shown under "all" on the
+  // titles tab). Generated last so every earlier quiz keeps its RNG sequence.
+  const mixQuestions = shuffle(titleQuizzes.flatMap((q) => q.questions));
+  const nMix = Math.max(1, Math.round(mixQuestions.length / QUIZ_SIZE));
+  const mixQuizzes = [];
+  for (let i = 0; i < nMix; i++) {
+    const qs = mixQuestions.slice(Math.round((i * mixQuestions.length) / nMix), Math.round(((i + 1) * mixQuestions.length) / nMix));
+    mixQuizzes.push({
+      id: `${L.idPrefix}titles-mix-${i + 1}`,
+      kind: 'titles',
+      title: L.mixTitleQuizTitle(i + 1),
+      covers: qs.map((q) => q.vachno),
+      questions: qs,
+    });
+  }
+  if (mixQuizzes.flatMap((q) => q.covers).length !== source.length) {
+    throw new Error(`[${lang}] Mixed title quizzes must cover each Vachanamrut exactly once`);
+  }
+  quizzes.push(...mixQuizzes);
+
   const subjects = fs.existsSync(path.join(here, 'subjects.json')) ? readJson('subjects.json') : [];
   const data = {
     generated: new Date().toISOString().slice(0, 10),
@@ -456,7 +479,7 @@ function build(lang) {
   };
   fs.writeFileSync(path.join(here, '..', 'public', 'data', L.out), JSON.stringify(data));
   const total = quizzes.reduce((a, q) => a + q.questions.length, 0);
-  console.log(`[${lang}] quizzes=${quizzes.length} (titles=${titleQuizzes.length}, topics=${topicQuizzes.length}, study=${studyQuizzes.length}, subject=${subjectQuizzes.length}, content=${contentQuizzes.reduce((a, q) => a + q.questions.length, 0)}q) questions=${total} covered=${covered.size}/${source.length} askers=${askerPool.length}`);
+  console.log(`[${lang}] quizzes=${quizzes.length} (titles=${titleQuizzes.length}+${mixQuizzes.length} mixed, topics=${topicQuizzes.length}, study=${studyQuizzes.length}, subject=${subjectQuizzes.length}, content=${contentQuizzes.reduce((a, q) => a + q.questions.length, 0)}q) questions=${total} covered=${covered.size}/${source.length} askers=${askerPool.length}`);
 }
 
 build('gu');

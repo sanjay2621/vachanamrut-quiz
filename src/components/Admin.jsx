@@ -128,13 +128,13 @@ export default function Admin({ data, config, onSaved }) {
       const qs = data.quizzes.filter((q) => (q.kind || 'quiz') === k.id);
       const byGroup = new Map();
       for (const q of qs) {
-        const g = k.id === 'subject' ? q.subject : q.section;
+        const g = (k.id === 'subject' ? q.subject : q.section) || 'mix';
         if (!byGroup.has(g)) byGroup.set(g, []);
         byGroup.get(g).push(q);
       }
       const subs = [...byGroup].map(([g, list]) => ({
         id: g,
-        name: (k.id === 'subject' ? subjName[g] : secName[g]) || g,
+        name: (k.id === 'subject' ? subjName[g] : secName[g]) || t('mixLabel'),
         quizzes: list,
       }));
       return { ...k, quizzes: qs, subs };
