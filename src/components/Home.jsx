@@ -12,13 +12,15 @@ export default function Home({ data, mode = 'quiz' }) {
   const kindOf = (q) => q.kind || 'quiz';
   const quizzes = data.quizzes.filter((q) => kindOf(q) === mode);
   const countOf = (k) => data.quizzes.filter((q) => kindOf(q) === k).length;
-  const MODES = [
+  const ALL_MODES = [
     { id: 'quiz', href: '#/', label: 'knowledgeQuiz', sub: 'heroSubQuiz' },
     { id: 'titles', href: '#/home/titles', label: 'titleQuiz', sub: 'heroSubTitles' },
     { id: 'topics', href: '#/home/topics', label: 'topicQuiz', sub: 'heroSubTopics' },
     { id: 'study', href: '#/home/study', label: 'studyQuiz', sub: 'heroSubStudy' },
     { id: 'subject', href: '#/home/subject', label: 'subjectQuizTab', sub: 'heroSubSubject' },
   ];
+  // Tabs with no visible quizzes (all switched off on the admin page) are hidden
+  const MODES = ALL_MODES.filter((m) => m.id === mode || countOf(m.id) > 0);
   const current = MODES.find((m) => m.id === mode) || MODES[0];
   const totalQ = quizzes.reduce((a, q) => a + q.questions.length, 0);
   const done = quizzes.filter((q) => scores[q.id]).length;
@@ -45,7 +47,7 @@ export default function Home({ data, mode = 'quiz' }) {
           <div><strong>{num(done)}</strong><span>{t('statDone')}</span></div>
         </div>
         <div className="hero-actions">
-          {mode === 'quiz' && (
+          {mode === 'quiz' && quizzes.length > 0 && (
             <a className="btn btn-primary" href={`#/practice/${section}`}>
               {t('quickPractice')}
             </a>
@@ -53,7 +55,7 @@ export default function Home({ data, mode = 'quiz' }) {
           <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">
-          <div className="overall-bar"><span style={{ width: `${(done / quizzes.length) * 100}%` }} /></div>
+          <div className="overall-bar"><span style={{ width: `${quizzes.length ? (done / quizzes.length) * 100 : 0}%` }} /></div>
           <small>{t('progress', { a: done, b: quizzes.length })}</small>
         </div>
       </section>
@@ -95,7 +97,7 @@ export default function Home({ data, mode = 'quiz' }) {
         <button role="tab" aria-selected={section === 'all'} className={section === 'all' ? 'chip on' : 'chip'} onClick={() => setSection('all')}>
           {t('all')}
         </button>
-        {data.sections.map((s) => (
+        {data.sections.filter((s) => quizzes.some((q) => q.section === s.id)).map((s) => (
           <button
             key={s.id}
             role="tab"
@@ -110,6 +112,7 @@ export default function Home({ data, mode = 'quiz' }) {
       </div>
       )}
 
+      {!quizzes.length && <p className="center-msg">{t('noQuizzes')}</p>}
       <section className="grid">
         {visible.map((q) => {
           const sc = scores[q.id];

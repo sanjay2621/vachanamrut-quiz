@@ -4,12 +4,14 @@ import Quiz from './components/Quiz.jsx';
 import TitleIndex from './components/TitleIndex.jsx';
 import Subjects from './components/Subjects.jsx';
 import Prapti from './components/Prapti.jsx';
+import Admin, { baseId } from './components/Admin.jsx';
 import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
 // Hash routes: #/  #/home/titles  #/home/topics  #/home/study  #/home/subject  #/quiz/<id>  #/practice/<sectionId|all>  #/titles
 //              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
+//              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
   return { page: parts[0] || 'home', arg: parts[1] || null };
@@ -33,12 +35,21 @@ const DATA_URL = { gu: '/data/quizzes.json', en: '/data/quizzes.en.json' };
 
 export default function App() {
   const [lang, setLangState] = useState(() => getLang());
-  const [data, setData] = useState(null);
+  const [rawData, setData] = useState(null);
   const [error, setError] = useState(null);
   const [route, setRoute] = useState(parseHash);
   const [theme, setThemeState] = useState(() => getTheme());
   const [practiceKey, setPracticeKey] = useState(0);
   const [prapti, setPrapti] = useState(null);
+  // Quiz visibility set on the admin page; hidden quizzes are dropped everywhere
+  const [quizConfig, setQuizConfig] = useState(null);
+
+  useEffect(() => {
+    fetch('/data/quiz-config.json', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { disabled: [] }))
+      .then((c) => setQuizConfig({ disabled: c.disabled || [] }))
+      .catch(() => setQuizConfig({ disabled: [] }));
+  }, []);
 
   // Daily પ્રાપ્તિનો વિચાર content is language-independent (Gujarati), loaded once
   useEffect(() => {
@@ -47,6 +58,11 @@ export default function App() {
       .then(setPrapti)
       .catch(() => setPrapti({ days: [] }));
   }, []);
+  const data = useMemo(() => {
+    if (!rawData || !quizConfig) return null;
+    const hidden = new Set(quizConfig.disabled);
+    return { ...rawData, quizzes: rawData.quizzes.filter((q) => !hidden.has(baseId(q.id))) };
+  }, [rawData, quizConfig]);
   const L = useMemo(() => makeT(lang), [lang]);
   const { t } = L;
 
@@ -116,6 +132,7 @@ export default function App() {
         .filter((q) => q.kind !== 'titles' && q.kind !== 'subject')
         .flatMap((q) => q.questions)
         .filter((q) => inSubject.has(q.vachno) && !['date', 'asker'].includes(q.type));
+      if (!pool.length) return null;
       return {
         id: `practice-subject-${subject.id}`,
         title: t('subjectQuizTitle', { s: subject.name }),
@@ -128,6 +145,7 @@ export default function App() {
     const pool = data.quizzes
       .filter((q) => q.kind !== 'titles' && q.kind !== 'subject' && (!sec || q.section === sec.id))
       .flatMap((q) => q.questions);
+    if (!pool.length) return null;
     return {
       id: `practice-${sec ? sec.id : 'all'}`,
       title: sec ? t('practiceSection', { s: sec.name }) : t('practiceAll'),
@@ -153,6 +171,8 @@ export default function App() {
         {t('loading')}
       </div>
     );
+  } else if (route.page === 'enabledisablequizes') {
+    content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} />;
   } else if (route.page === 'quiz') {
     const quiz = data.quizzes.find((q) => q.id === route.arg);
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;

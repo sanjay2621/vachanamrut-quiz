@@ -63,3 +63,40 @@ export function getLang() {
 export function setLang(lang) {
   writeAll({ ...readAll(), lang });
 }
+
+// Admin page (#/enabledisablequizes): GitHub token lives only in this browser,
+// under its own key so it never mixes with scores. Unlock lasts for the tab session.
+const ADMIN_KEY = 'vachanamrut-quiz:admin';
+
+export function getAdminToken() {
+  try {
+    return localStorage.getItem(ADMIN_KEY) || '';
+  } catch {
+    return '';
+  }
+}
+
+export function setAdminToken(token) {
+  try {
+    if (token) localStorage.setItem(ADMIN_KEY, token);
+    else localStorage.removeItem(ADMIN_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function isAdminUnlocked(hash) {
+  try {
+    return sessionStorage.getItem(ADMIN_KEY) === hash;
+  } catch {
+    return false;
+  }
+}
+
+export function setAdminUnlocked(hash) {
+  try {
+    sessionStorage.setItem(ADMIN_KEY, hash);
+  } catch {
+    /* ignore */
+  }
+}
