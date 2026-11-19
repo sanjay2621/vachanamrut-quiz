@@ -17,7 +17,7 @@ const toOf = (d) => d.to || d.from || d.date;
 // Entries newest first
 const sortRanges = (days) => [...days].sort((a, b) => fromOf(b).localeCompare(fromOf(a)));
 
-// A range is locked (greyed "coming soon" tab, never opened) until its start
+// A range is locked (no tab, never opened) until its start
 // date, or always when marked `disabled: true` (content not ready yet).
 export const isLocked = (d, today = todayKey()) => !!d.disabled || fromOf(d) > today;
 
@@ -93,12 +93,9 @@ export default function Prapti({ prapti, date }) {
   const today = todayKey();
   const day = pickDay(prapti.days, date || today);
   if (!day) return <div className="center-msg">{t('nothingFound')}</div>;
-  // Open ranges newest first (current one leads), then upcoming ones soonest first.
-  const sorted = sortRanges(prapti.days);
-  const ranges = [
-    ...sorted.filter((d) => !isLocked(d, today)),
-    ...sorted.filter((d) => isLocked(d, today)).reverse(),
-  ];
+  // Only open ranges get a tab (newest first, so the current one leads);
+  // future/disabled ranges stay hidden until their start date.
+  const ranges = sortRanges(prapti.days).filter((d) => !isLocked(d, today));
   const locale = lang === 'gu' ? 'gu-IN' : 'en-GB';
   const fmt = (k, opts) => new Date(`${k}T00:00:00`).toLocaleDateString(locale, opts);
   const rangeLabel = (d, long) => {
@@ -115,11 +112,7 @@ export default function Prapti({ prapti, date }) {
     <div className="prapti">
       {ranges.length > 0 && (
         <div className="chips prapti-tabs" role="tablist" aria-label={t('praptiRanges')}>
-          {ranges.map((d) => isLocked(d, today) ? (
-            <span key={fromOf(d)} role="tab" aria-disabled="true" className="chip disabled" title={t('praptiSoon')}>
-              {rangeLabel(d, false)} · {t('praptiSoon')}
-            </span>
-          ) : (
+          {ranges.map((d) => (
             <a
               key={fromOf(d)}
               role="tab"

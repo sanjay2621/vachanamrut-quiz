@@ -385,7 +385,6 @@ button { font: inherit; color: inherit; }
 .prapti-source { color: var(--muted); font-size: 13px; }
 .prapti-tabs { margin-bottom: 14px; }
 .prapti-tabs .chip { text-decoration: none; }
-.prapti-tabs .chip.disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 640px) {
   .topnav { overflow-x: auto; max-width: 70vw; scrollbar-width: none; }
   .sections .section { padding: 4px 9px; font-size: 13px; }
