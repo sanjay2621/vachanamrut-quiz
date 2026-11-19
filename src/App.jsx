@@ -5,6 +5,7 @@ import TitleIndex from './components/TitleIndex.jsx';
 import Subjects from './components/Subjects.jsx';
 import Prapti from './components/Prapti.jsx';
 import Admin, { baseId } from './components/Admin.jsx';
+import Pravachan from './components/Pravachan.jsx';
 import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
@@ -12,9 +13,10 @@ import { LangContext, makeT } from './i18n.js';
 //              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
+//              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
-  return { page: parts[0] || 'home', arg: parts[1] || null };
+  return { page: parts[0] || 'home', arg: parts[1] || null, arg2: parts[2] || null };
 }
 
 export function navigate(path) {
@@ -173,6 +175,8 @@ export default function App() {
     );
   } else if (route.page === 'enabledisablequizes') {
     content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} />;
+  } else if (route.page === 'pravachan') {
+    content = <Pravachan id={route.arg} itemKey={route.arg2} />;
   } else if (route.page === 'quiz') {
     const quiz = data.quizzes.find((q) => q.id === route.arg);
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;

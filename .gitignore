@@ -3,3 +3,6 @@ dist
 .vercel
 *.log
 scripts/.cache
+
+# Local secrets (never commit)
+vqtoken.txt

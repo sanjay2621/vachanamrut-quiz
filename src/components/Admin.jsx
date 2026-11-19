@@ -10,7 +10,7 @@ import { getAdminToken, setAdminToken, isAdminUnlocked, setAdminUnlocked } from 
 // The access code is only a gate for the page. It is checked in the browser
 // against its SHA-256 hash, so the code itself is not in the site files, but this
 // is not real security: the GitHub token is what actually protects the data.
-const CODE_HASH = '460d7b810b0ab8e55d8519736ed6d40e651a3392e0a0dc1cc798a332facdcc34';
+export const CODE_HASH = '460d7b810b0ab8e55d8519736ed6d40e651a3392e0a0dc1cc798a332facdcc34';
 const REPO = 'sanjay2621/vachanamrut-quiz';
 const BRANCH = 'main';
 const PATH = 'public/data/quiz-config.json';
@@ -59,7 +59,7 @@ const KINDS = [
   { id: 'subject', label: 'subjectQuizTab' },
 ];
 
-function Gate({ onUnlock }) {
+export function Gate({ onUnlock, title }) {
   const { t } = useLang();
   const [code, setCode] = useState('');
   const [wrong, setWrong] = useState(false);
@@ -75,7 +75,7 @@ function Gate({ onUnlock }) {
   };
   return (
     <form className="admin-gate" onSubmit={submit}>
-      <h1>{t('adminTitle')}</h1>
+      <h1>{title || t('adminTitle')}</h1>
       <label htmlFor="admin-code">{t('adminCode')}</label>
       <input
         id="admin-code"
@@ -181,6 +181,7 @@ export default function Admin({ data, config, onSaved }) {
     <div className="admin">
       <h1>{t('adminTitle')}</h1>
       <p className="admin-note">{t('adminIntro')}</p>
+      <p><a className="btn btn-ghost" href="#/pravachan">{t('pravachanOpen')}</a></p>
 
       <section className="admin-token">
         {token ? (
