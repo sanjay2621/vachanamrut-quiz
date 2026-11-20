@@ -255,13 +255,16 @@ export default function Admin({ data, config, onSaved }) {
         )}
       </section>
 
+      {/* Builder first; the long on/off lists below start collapsed (special quizzes open) */}
+      <Custom data={data} onCreate={createCustom} />
+
       <div className="admin-summary">
         <strong>{t('adminVisible', { a: num(onCount(all)), b: num(all.length) })}</strong>
         <OnOff list={all} />
       </div>
 
       {groups.map((k) => (
-        <details key={k.id} className="admin-kind" open>
+        <details key={k.id} className="admin-kind" open={k.id === 'custom'}>
           <summary>
             {t(k.label)} <span className="chip-count">{num(onCount(k.quizzes))} / {num(k.quizzes.length)}</span>
           </summary>
@@ -290,8 +293,6 @@ export default function Admin({ data, config, onSaved }) {
           ))}
         </details>
       ))}
-
-      <Custom data={data} onCreate={createCustom} />
 
       <div className="admin-savebar">
         <span>{changed ? t('adminUnsaved', { n: num(changed) }) : t('adminNoChanges')}</span>

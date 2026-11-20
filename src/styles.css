@@ -489,3 +489,4 @@ img { -webkit-user-drag: none; }
 .custom-preview small { color: var(--primary); font-weight: 600; }
 .custom-preview em { color: var(--ok); font-style: normal; }
 .admin-row .chip { padding: 3px 10px; font-size: .82rem; text-decoration: none; }
+.admin-builder .custom-list { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; padding: 4px; background: var(--surface-2); }
