@@ -464,7 +464,7 @@ img { -webkit-user-drag: none; }
 .adh-nav .btn { max-width: 100%; white-space: normal; text-align: left; }
 .adh .pv-source a { color: var(--primary); }
 
-/* Custom quiz builder (#/custom) */
+/* Custom quiz builder (inside the admin page) */
 .custom { max-width: 860px; margin: 0 auto; }
 .custom h1 { font-size: 1.5rem; margin: 8px 0; }
 .custom-picked, .custom-options { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
@@ -479,3 +479,13 @@ img { -webkit-user-drag: none; }
 .custom-list .admin-row.on { background: var(--surface-2); }
 .custom-ref { flex: none; min-width: 9em; color: var(--primary); }
 @media (max-width: 560px) { .custom-list .admin-row { flex-wrap: wrap; } .custom-ref { min-width: 0; } }
+.admin-builder { max-width: none; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 20px 0; }
+.admin-builder h2 { margin: 0 0 4px; font-size: 1.25rem; }
+.admin-builder .custom-picked, .admin-builder .custom-options { background: var(--surface-2); }
+.custom-field { display: flex; flex-direction: column; gap: 4px; }
+.custom-field input { font: inherit; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.custom-preview { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 12px 12px 36px; margin: 0 0 14px; max-height: 360px; overflow-y: auto; line-height: 1.6; }
+.custom-preview li { margin-bottom: 6px; }
+.custom-preview small { color: var(--primary); font-weight: 600; }
+.custom-preview em { color: var(--ok); font-style: normal; }
+.admin-row .chip { padding: 3px 10px; font-size: .82rem; text-decoration: none; }

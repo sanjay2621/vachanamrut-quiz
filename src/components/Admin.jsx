@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../i18n.js';
 import { getAdminToken, setAdminToken, isAdminUnlocked, setAdminUnlocked } from '../storage.js';
+import Custom from './Custom.jsx';
+import { buildCustomQuizzes } from '../customQuizzes.js';
 
 // Hidden admin page (#/enabledisablequizes, not linked anywhere): switch quizzes on/off
 // for every visitor. The visibility list is public/data/quiz-config.json
@@ -19,6 +21,14 @@ const API = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
 // One switch covers both languages: English quiz ids are the Gujarati ids with "en-"
 export const baseId = (id) => id.replace(/^en-/, '');
 
+// GitHub's contents API uses base64; go through UTF-8 bytes so Gujarati titles survive
+const toB64 = (text) => {
+  let bin = '';
+  for (const b of new TextEncoder().encode(text)) bin += String.fromCharCode(b);
+  return btoa(bin);
+};
+const fromB64 = (b64) => new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+
 async function sha256(text) {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
   return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
@@ -34,13 +44,13 @@ async function ghRead(token) {
   if (r.status === 404) return { sha: undefined, config: { disabled: [] } };
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
   const j = await r.json();
-  return { sha: j.sha, config: JSON.parse(atob(j.content.replace(/\n/g, ''))) };
+  return { sha: j.sha, config: JSON.parse(fromB64(j.content.replace(/\n/g, ''))) };
 }
 
 async function ghWrite(token, config, sha, message) {
   const body = {
     message,
-    content: btoa(`${JSON.stringify(config, null, 2)}\n`),
+    content: toB64(`${JSON.stringify(config, null, 2)}\n`),
     branch: BRANCH,
     ...(sha ? { sha } : {}),
   };
@@ -57,6 +67,7 @@ const KINDS = [
   { id: 'topics', label: 'topicQuiz' },
   { id: 'study', label: 'studyQuiz' },
   { id: 'subject', label: 'subjectQuizTab' },
+  { id: 'custom', label: 'customQuizTab' },
 ];
 
 export function Gate({ onUnlock, title }) {
@@ -95,12 +106,15 @@ export function Gate({ onUnlock, title }) {
 }
 
 export default function Admin({ data, config, onSaved }) {
-  const { t, num } = useLang();
+  const { t, num, lang } = useLang();
   const [unlocked, setUnlocked] = useState(() => isAdminUnlocked(CODE_HASH));
   const [token, setToken] = useState(() => getAdminToken());
   const [tokenInput, setTokenInput] = useState('');
   const [saved, setSaved] = useState(() => new Set(config.disabled || []));
   const [disabled, setDisabled] = useState(() => new Set(config.disabled || []));
+  // Custom quizzes made with the builder below (saved in the same config file)
+  const [savedCustom, setSavedCustom] = useState(() => config.custom || []);
+  const [customs, setCustoms] = useState(() => config.custom || []);
   const [status, setStatus] = useState(null); // { kind: 'ok' | 'err' | 'busy', msg }
 
   // With a token, start from the file on GitHub: the deployed copy can lag a
@@ -113,6 +127,8 @@ export default function Admin({ data, config, onSaved }) {
         if (cancelled) return;
         setSaved(new Set(c.disabled || []));
         setDisabled(new Set(c.disabled || []));
+        setSavedCustom(c.custom || []);
+        setCustoms(c.custom || []);
       })
       .catch((e) => !cancelled && setStatus({ kind: 'err', msg: t('adminLoadFail', { e: e.message }) }));
     return () => {
@@ -121,29 +137,31 @@ export default function Admin({ data, config, onSaved }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked, token]);
 
+  const quizzes = useMemo(() => [...data.quizzes, ...buildCustomQuizzes(data.quizzes, customs, lang)], [data, customs, lang]);
   const groups = useMemo(() => {
     const secName = Object.fromEntries(data.sections.map((s) => [s.id, s.name]));
     const subjName = Object.fromEntries((data.subjects || []).map((s) => [s.id, s.name]));
     return KINDS.map((k) => {
-      const qs = data.quizzes.filter((q) => (q.kind || 'quiz') === k.id);
+      const qs = quizzes.filter((q) => (q.kind || 'quiz') === k.id);
       const byGroup = new Map();
       for (const q of qs) {
-        const g = (k.id === 'subject' ? q.subject : q.section) || 'mix';
+        const g = k.id === 'custom' ? 'custom' : (k.id === 'subject' ? q.subject : q.section) || 'mix';
         if (!byGroup.has(g)) byGroup.set(g, []);
         byGroup.get(g).push(q);
       }
       const subs = [...byGroup].map(([g, list]) => ({
         id: g,
-        name: (k.id === 'subject' ? subjName[g] : secName[g]) || t('mixLabel'),
+        name: g === 'custom' ? t('customQuizTab') : (k.id === 'subject' ? subjName[g] : secName[g]) || t('mixLabel'),
         quizzes: list,
       }));
       return { ...k, quizzes: qs, subs };
     }).filter((k) => k.quizzes.length);
-  }, [data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, quizzes]);
 
   if (!unlocked) return <Gate onUnlock={() => setUnlocked(true)} />;
 
-  const all = data.quizzes;
+  const all = quizzes;
   const isOn = (q) => !disabled.has(baseId(q.id));
   const onCount = (list) => list.filter(isOn).length;
   const setMany = (list, on) =>
@@ -152,17 +170,39 @@ export default function Admin({ data, config, onSaved }) {
       for (const q of list) on ? next.delete(baseId(q.id)) : next.add(baseId(q.id));
       return next;
     });
+  const customIds = new Set(customs.map((c) => c.id));
+  const savedCustomIds = new Set(savedCustom.map((c) => c.id));
   const changed =
-    [...disabled].filter((id) => !saved.has(id)).length + [...saved].filter((id) => !disabled.has(id)).length;
+    [...disabled].filter((id) => !saved.has(id)).length +
+    [...saved].filter((id) => !disabled.has(id)).length +
+    [...customIds].filter((id) => !savedCustomIds.has(id)).length +
+    [...savedCustomIds].filter((id) => !customIds.has(id)).length;
+
+  // A new custom quiz starts switched off; enable it in its group, then Save
+  const createCustom = (c) => {
+    setCustoms((prev) => [...prev, c]);
+    setDisabled((prev) => new Set(prev).add(c.id));
+  };
+  const deleteCustom = (id) => {
+    if (!window.confirm(t('customDeleteConfirm'))) return;
+    setCustoms((prev) => prev.filter((c) => c.id !== id));
+    setDisabled((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
 
   const save = async () => {
     if (!token) return setStatus({ kind: 'err', msg: t('adminNeedToken') });
     setStatus({ kind: 'busy', msg: t('adminSaving') });
-    const next = { disabled: [...disabled].sort() };
+    // Drop switches for custom quizzes that no longer exist
+    const next = { disabled: [...disabled].filter((id) => !id.startsWith('custom-') || customIds.has(id)).sort(), custom: customs };
     try {
       const { sha } = await ghRead(token);
       await ghWrite(token, next, sha, `Quiz visibility: ${next.disabled.length} hidden (admin page)`);
       setSaved(new Set(next.disabled));
+      setSavedCustom(customs);
       onSaved(next);
       setStatus({ kind: 'ok', msg: t('adminSaved') });
     } catch (e) {
@@ -238,12 +278,20 @@ export default function Admin({ data, config, onSaved }) {
                   <input type="checkbox" checked={isOn(q)} onChange={(e) => setMany([q], e.target.checked)} />
                   <span>{q.title}</span>
                   <small>{t('adminQs', { n: num(q.questions.length) })}</small>
+                  {q.kind === 'custom' && (
+                    <>
+                      <a className="chip" href={`#/quiz/${q.id}`}>{t('customPreview')}</a>
+                      <button type="button" className="chip" onClick={(e) => { e.preventDefault(); deleteCustom(baseId(q.id)); }}>{t('customDelete')}</button>
+                    </>
+                  )}
                 </label>
               ))}
             </div>
           ))}
         </details>
       ))}
+
+      <Custom data={data} onCreate={createCustom} />
 
       <div className="admin-savebar">
         <span>{changed ? t('adminUnsaved', { n: num(changed) }) : t('adminNoChanges')}</span>

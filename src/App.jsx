@@ -7,7 +7,9 @@ import Prapti from './components/Prapti.jsx';
 import Admin, { baseId } from './components/Admin.jsx';
 import Pravachan from './components/Pravachan.jsx';
 import Adhiveshan from './components/Adhiveshan.jsx';
-import Custom, { parseSpec, customPool } from './components/Custom.jsx';
+import { buildCustomQuizzes } from './customQuizzes.js';
+import { isAdminUnlocked } from './storage.js';
+import { CODE_HASH } from './components/Admin.jsx';
 import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
@@ -16,7 +18,6 @@ import { LangContext, makeT } from './i18n.js';
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 //              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
-//              #/custom[/<spec>]  #/custom-quiz/<spec>   (custom quiz from chosen Vachanamrut, see Custom.jsx)
 //              #/adhiveshan[/<n>]   (અધિવેશન પ્રસંગ section: 100 Satsang Prasang, gu/en)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
@@ -52,9 +53,9 @@ export default function App() {
 
   useEffect(() => {
     fetch('/data/quiz-config.json', { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : { disabled: [] }))
-      .then((c) => setQuizConfig({ disabled: c.disabled || [] }))
-      .catch(() => setQuizConfig({ disabled: [] }));
+      .then((r) => (r.ok ? r.json() : {}))
+      .then((c) => setQuizConfig({ disabled: c.disabled || [], custom: c.custom || [] }))
+      .catch(() => setQuizConfig({ disabled: [], custom: [] }));
   }, []);
 
   // Daily પ્રાપ્તિનો વિચાર content is language-independent (Gujarati), loaded once
@@ -64,13 +65,19 @@ export default function App() {
       .then(setPrapti)
       .catch(() => setPrapti({ days: [] }));
   }, []);
-  const data = useMemo(() => {
+  // All quizzes incl. admin-made custom ones (quiz-config.json `custom`), then the
+  // visible subset everything else uses
+  const fullData = useMemo(() => {
     if (!rawData || !quizConfig) return null;
+    return { ...rawData, quizzes: [...rawData.quizzes, ...buildCustomQuizzes(rawData.quizzes, quizConfig.custom, lang)] };
+  }, [rawData, quizConfig, lang]);
+  const data = useMemo(() => {
+    if (!fullData) return null;
     const hidden = new Set(quizConfig.disabled);
-    return { ...rawData, quizzes: rawData.quizzes.filter((q) => !hidden.has(baseId(q.id))) };
-  }, [rawData, quizConfig]);
+    return { ...fullData, quizzes: fullData.quizzes.filter((q) => !hidden.has(baseId(q.id))) };
+  }, [fullData, quizConfig]);
   const L = useMemo(() => makeT(lang), [lang]);
-  const { t, num } = L;
+  const { t } = L;
 
   useEffect(() => {
     let cancelled = false;
@@ -136,7 +143,7 @@ export default function App() {
       if (!subject) return null;
       const inSubject = new Set(subject.vachnos);
       const pool = data.quizzes
-        .filter((q) => q.kind !== 'titles' && q.kind !== 'subject')
+        .filter((q) => !['titles', 'subject', 'custom'].includes(q.kind))
         .flatMap((q) => q.questions)
         .filter((q) => inSubject.has(q.vachno) && !['date', 'asker'].includes(q.type));
       if (!pool.length) return null;
@@ -145,28 +152,6 @@ export default function App() {
         title: t('subjectQuizTitle', { s: subject.name }),
         back: `#/subjects/${subject.id}`,
         questions: shuffle(pool).slice(0, 20),
-      };
-    }
-    if (route.page === 'custom-quiz') {
-      // Custom quiz: questions about the chosen Vachanamrut, taken in turns from each
-      // one so every pick is represented, then shuffled. Unscored (id starts "practice").
-      const { nos, kinds, count } = parseSpec(route.arg);
-      const pool = customPool(data.quizzes, nos, kinds);
-      if (!pool.length) return null;
-      const byNo = new Map();
-      for (const q of shuffle(pool)) (byNo.get(q.vachno) || byNo.set(q.vachno, []).get(q.vachno)).push(q);
-      const queues = shuffle([...byNo.values()]);
-      const limit = count === 'all' ? pool.length : Math.min(count, pool.length);
-      const picked = [];
-      for (let i = 0; picked.length < limit; i++) {
-        const queue = queues[i % queues.length];
-        if (queue.length) picked.push(queue.pop());
-      }
-      return {
-        id: 'practice-custom',
-        title: t('customQuizTitle', { n: num(nos.length) }),
-        back: `#/custom/${route.arg}`,
-        questions: shuffle(picked),
       };
     }
     if (route.page === 'title-mix') {
@@ -187,7 +172,7 @@ export default function App() {
     if (route.page !== 'practice') return null;
     const sec = data.sections.find((s) => s.id === route.arg);
     const pool = data.quizzes
-      .filter((q) => q.kind !== 'titles' && q.kind !== 'subject' && (!sec || q.section === sec.id))
+      .filter((q) => !['titles', 'subject', 'custom'].includes(q.kind) && (!sec || q.section === sec.id))
       .flatMap((q) => q.questions);
     if (!pool.length) return null;
     return {
@@ -222,13 +207,14 @@ export default function App() {
   } else if (route.page === 'pravachan') {
     content = <Pravachan id={route.arg} itemKey={route.arg2} />;
   } else if (route.page === 'quiz') {
-    const quiz = data.quizzes.find((q) => q.id === route.arg);
+    // While the admin page is unlocked, hidden quizzes open too (preview before enabling)
+    const quiz =
+      data.quizzes.find((q) => q.id === route.arg) ||
+      (isAdminUnlocked(CODE_HASH) ? fullData.quizzes.find((q) => q.id === route.arg) : null);
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;
   } else if (route.page === 'subjects') {
     content = <Subjects data={data} subjectId={route.arg} />;
-  } else if (route.page === 'custom') {
-    content = <Custom key={`${lang}-${route.arg}`} data={data} spec={route.arg} />;
-  } else if (['practice', 'subject-quiz', 'title-mix', 'custom-quiz'].includes(route.page)) {
+  } else if (['practice', 'subject-quiz', 'title-mix'].includes(route.page)) {
     content = practiceQuiz ? (
       <Quiz
         key={`${lang}-${practiceQuiz.id}-${practiceKey}`}
@@ -244,7 +230,7 @@ export default function App() {
   } else if (route.page === 'titles') {
     content = <TitleIndex data={data} />;
   } else {
-    content = <Home key={lang} data={data} mode={['titles', 'topics', 'study', 'subject'].includes(route.arg) ? route.arg : 'quiz'} />;
+    content = <Home key={lang} data={data} mode={['titles', 'topics', 'study', 'subject', 'custom'].includes(route.arg) ? route.arg : 'quiz'} />;
   }
 
   return (

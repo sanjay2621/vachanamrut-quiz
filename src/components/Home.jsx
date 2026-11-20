@@ -18,6 +18,7 @@ export default function Home({ data, mode = 'quiz' }) {
     { id: 'topics', href: '#/home/topics', label: 'topicQuiz', sub: 'heroSubTopics' },
     { id: 'study', href: '#/home/study', label: 'studyQuiz', sub: 'heroSubStudy' },
     { id: 'subject', href: '#/home/subject', label: 'subjectQuizTab', sub: 'heroSubSubject' },
+    { id: 'custom', href: '#/home/custom', label: 'customQuizTab', sub: 'heroSubCustom' },
   ];
   // Tabs with no visible quizzes (all switched off on the admin page) are hidden
   const MODES = ALL_MODES.filter((m) => m.id === mode || countOf(m.id) > 0);
@@ -57,7 +58,6 @@ export default function Home({ data, mode = 'quiz' }) {
               {t('titleMix')}
             </a>
           )}
-          <a className="btn btn-ghost" href="#/custom">{t('customCta')}</a>
           <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">
@@ -123,7 +123,7 @@ export default function Home({ data, mode = 'quiz' }) {
         {visible.map((q) => {
           const sc = scores[q.id];
           // Mixed title quizzes have no section
-          const label = isSubject ? subjById[q.subject]?.name : secById[q.section]?.name || t('mixLabel');
+          const label = isSubject ? subjById[q.subject]?.name : secById[q.section]?.name || t(q.kind === 'custom' ? 'customQuizTab' : 'mixLabel');
           return (
             <a key={q.id} href={`#/quiz/${q.id}`} className={`card sec-${q.section || (isSubject ? 'subject' : 'mix')}`}>
               <div className="card-top">
@@ -135,7 +135,7 @@ export default function Home({ data, mode = 'quiz' }) {
               <p className="card-range">
                 {q.section || isSubject
                   ? `${refByNo[q.covers[0]]} … ${refByNo[q.covers[q.covers.length - 1]]}`
-                  : t('mixRange')}
+                  : q.kind === 'custom' ? t('customCovers', { n: num(q.covers.length) }) : t('mixRange')}
               </p>
               <span className="card-cta">{sc ? t('playAgainCta') : t('startCta')}</span>
             </a>

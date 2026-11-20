@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useLang } from '../i18n.js';
 import { norm, searchTerms, matchesAll } from '../textSearch.jsx';
+import { customPool, pickQuestions } from '../customQuizzes.js';
 
-// Custom quiz builder (#/custom[/<spec>]): pick any Vachanamrut, question types and a
-// size; "Create quiz" opens #/custom-quiz/<spec>, built in App.jsx from the visible
-// quizzes' questions about the picked Vachanamrut. Unscored, like practice.
-//
-// spec = "<vachno.vachno…>~<kind,kind…>~<count|all>", e.g. "14.271.120~quiz,titles~20"
+// Custom quiz builder, shown inside the admin page: pick any Vachanamrut (all
+// questions, hidden quizzes included), question kinds and a size, generate a fixed
+// set of questions, preview it and add it as a quiz. The admin page then saves it to
+// quiz-config.json (`custom`), switched off until it is enabled there.
 export const KINDS = [
   { id: 'quiz', label: 'knowledgeQuiz' },
   { id: 'titles', label: 'titleQuiz' },
@@ -14,76 +14,79 @@ export const KINDS = [
   { id: 'study', label: 'studyQuiz' },
   { id: 'subject', label: 'subjectQuizTab' },
 ];
-const SIZES = [10, 20, 30, 50, 'all'];
+const SIZES = [10, 20, 25, 30, 50, 'all'];
 
-export function parseSpec(spec) {
-  const [nos = '', kinds = '', count = '20'] = (spec || '').split('~');
-  return {
-    nos: nos.split('.').map(Number).filter(Boolean),
-    kinds: kinds ? kinds.split(',').filter((k) => KINDS.some((x) => x.id === k)) : KINDS.map((k) => k.id),
-    count: count === 'all' ? 'all' : Number(count) || 20,
-  };
-}
-export const makeSpec = ({ nos, kinds, count }) => `${nos.join('.')}~${kinds.join(',')}~${count}`;
-
-// Questions about the picked Vachanamrut from the given quiz kinds, one per question id
-export function customPool(quizzes, nos, kinds) {
-  const pick = new Set(nos);
-  const byId = new Map();
-  for (const q of quizzes) {
-    if (!kinds.includes(q.kind || 'quiz')) continue;
-    for (const x of q.questions) if (pick.has(x.vachno)) byId.set(x.id, x);
-  }
-  return [...byId.values()];
-}
-
-export default function Custom({ data, spec }) {
+export default function Custom({ data, onCreate }) {
   const { t, num } = useLang();
-  const initial = useMemo(() => parseSpec(spec), [spec]);
-  const [picked, setPicked] = useState(() => new Set(initial.nos));
-  const [kinds, setKinds] = useState(initial.kinds);
-  const [count, setCount] = useState(initial.count);
+  const [picked, setPicked] = useState(() => new Set());
+  const [kinds, setKinds] = useState(KINDS.map((k) => k.id));
+  const [count, setCount] = useState(25);
   const [query, setQuery] = useState('');
   const [section, setSection] = useState('all');
+  const [title, setTitle] = useState('');
+  const [titleEn, setTitleEn] = useState('');
+  const [draft, setDraft] = useState(null); // generated questions awaiting "add"
 
   const vByNo = useMemo(() => new Map(data.vachanamruts.map((v) => [v.vachno, v])), [data]);
+  const order = useMemo(() => new Map(data.vachanamruts.map((v, i) => [v.vachno, i])), [data]);
   const terms = searchTerms(query);
   const list = data.vachanamruts.filter(
     (v) => (section === 'all' || v.section === section) && (!terms.length || matchesAll(norm(`${v.ref} ${v.title}`), terms))
   );
-  // Selection in reading order
-  const order = new Map(data.vachanamruts.map((v, i) => [v.vachno, i]));
   const nos = [...picked].sort((a, b) => order.get(a) - order.get(b));
-  const available = customPool(data.quizzes, nos, kinds).length;
+  const pool = customPool(data.quizzes, nos, kinds);
 
+  const change = (fn) => {
+    fn();
+    setDraft(null);
+  };
   const toggle = (no) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      next.has(no) ? next.delete(no) : next.add(no);
-      return next;
-    });
+    change(() =>
+      setPicked((prev) => {
+        const next = new Set(prev);
+        next.has(no) ? next.delete(no) : next.add(no);
+        return next;
+      })
+    );
   const setAll = (vs, on) =>
-    setPicked((prev) => {
-      const next = new Set(prev);
-      for (const v of vs) on ? next.add(v.vachno) : next.delete(v.vachno);
-      return next;
-    });
-  const toggleKind = (k) => setKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k]));
-  const href = `#/custom-quiz/${makeSpec({ nos, kinds, count })}`;
-  const canCreate = nos.length > 0 && kinds.length > 0 && available > 0;
+    change(() =>
+      setPicked((prev) => {
+        const next = new Set(prev);
+        for (const v of vs) on ? next.add(v.vachno) : next.delete(v.vachno);
+        return next;
+      })
+    );
+  const toggleKind = (k) => change(() => setKinds((prev) => (prev.includes(k) ? prev.filter((x) => x !== k) : [...prev, k])));
   const allListed = list.length > 0 && list.every((v) => picked.has(v.vachno));
+  const autoTitle = () => {
+    const refs = nos.map((no) => vByNo.get(no)?.ref);
+    return `${t('customQuizTab')} — ${refs.slice(0, 3).join(', ')}${refs.length > 3 ? ' …' : ''}`;
+  };
+
+  const add = () => {
+    onCreate({
+      id: `custom-${Date.now().toString(36)}`,
+      title: title.trim() || autoTitle(),
+      ...(titleEn.trim() ? { titleEn: titleEn.trim() } : {}),
+      nos,
+      questions: draft.map((q) => q.id),
+      created: new Date().toISOString().slice(0, 10),
+    });
+    setPicked(new Set());
+    setTitle('');
+    setTitleEn('');
+    setDraft(null);
+  };
 
   return (
-    <div className="custom">
-      <h1>{t('customTitle')}</h1>
-      <p className="pv-meta">{t('customIntro')}</p>
+    <section className="custom admin-builder">
+      <h2>{t('customTitle')}</h2>
+      <p className="admin-note">{t('customIntro')}</p>
 
-      <section className="custom-picked">
+      <div className="custom-picked">
         <div className="custom-picked-head">
           <strong>{t('customPicked', { n: num(nos.length) })}</strong>
-          {nos.length > 0 && (
-            <button type="button" className="chip" onClick={() => setPicked(new Set())}>{t('customClear')}</button>
-          )}
+          {nos.length > 0 && <button type="button" className="chip" onClick={() => change(() => setPicked(new Set()))}>{t('customClear')}</button>}
         </div>
         {nos.length > 0 ? (
           <div className="custom-tags">
@@ -94,18 +97,16 @@ export default function Custom({ data, spec }) {
             ))}
           </div>
         ) : (
-          <p className="pv-meta">{t('customNone')}</p>
+          <p className="admin-note">{t('customNone')}</p>
         )}
-      </section>
+      </div>
 
-      <section className="custom-options">
+      <div className="custom-options">
         <div>
           <strong>{t('customTypes')}</strong>
           <div className="chips">
             {KINDS.map((k) => (
-              <button key={k.id} type="button" className={kinds.includes(k.id) ? 'chip on' : 'chip'} onClick={() => toggleKind(k.id)}>
-                {t(k.label)}
-              </button>
+              <button key={k.id} type="button" className={kinds.includes(k.id) ? 'chip on' : 'chip'} onClick={() => toggleKind(k.id)}>{t(k.label)}</button>
             ))}
           </div>
         </div>
@@ -113,35 +114,49 @@ export default function Custom({ data, spec }) {
           <strong>{t('customSize')}</strong>
           <div className="chips">
             {SIZES.map((s) => (
-              <button key={s} type="button" className={count === s ? 'chip on' : 'chip'} onClick={() => setCount(s)}>
+              <button key={s} type="button" className={count === s ? 'chip on' : 'chip'} onClick={() => change(() => setCount(s))}>
                 {s === 'all' ? t('all') : num(s)}
               </button>
             ))}
           </div>
         </div>
+        <label className="custom-field">
+          <strong>{t('customName')}</strong>
+          <input value={title} placeholder={nos.length ? autoTitle() : ''} onChange={(e) => setTitle(e.target.value)} />
+        </label>
+        <label className="custom-field">
+          <strong>{t('customNameEn')}</strong>
+          <input value={titleEn} onChange={(e) => setTitleEn(e.target.value)} />
+        </label>
         <div className="custom-create">
-          <span className="pv-meta">{nos.length ? t('customAvailable', { n: num(available) }) : ''}</span>
-          {canCreate ? (
-            <a className="btn btn-primary" href={href}>{t('customCreate')}</a>
-          ) : (
-            <button type="button" className="btn btn-primary" disabled>{t('customCreate')}</button>
-          )}
-        </div>
-      </section>
-
-      <input
-        className="search pv-search"
-        type="search"
-        placeholder={t('customSearch')}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
-      <div className="chips" role="tablist" aria-label={t('pickSection')}>
-        <button className={section === 'all' ? 'chip on' : 'chip'} onClick={() => setSection('all')}>{t('all')}</button>
-        {data.sections.map((s) => (
-          <button key={s.id} className={section === s.id ? 'chip on' : 'chip'} onClick={() => setSection(s.id)}>
-            {s.name}
+          <span className="admin-note">{nos.length ? t('customAvailable', { n: num(pool.length) }) : ''}</span>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={!nos.length || !kinds.length || !pool.length}
+            onClick={() => setDraft(pickQuestions(pool, count))}
+          >
+            {draft ? t('customRegenerate') : t('customGenerate')}
           </button>
+          {draft && <button type="button" className="btn btn-primary" onClick={add}>{t('customAdd', { n: num(draft.length) })}</button>}
+        </div>
+      </div>
+
+      {draft && (
+        <ol className="custom-preview">
+          {draft.map((q) => (
+            <li key={q.id}>
+              <small>{q.ref}</small> {q.question} <em>→ {q.options[q.answer]}</em>
+            </li>
+          ))}
+        </ol>
+      )}
+
+      <input className="search pv-search" type="search" placeholder={t('customSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />
+      <div className="chips" role="tablist" aria-label={t('pickSection')}>
+        <button type="button" className={section === 'all' ? 'chip on' : 'chip'} onClick={() => setSection('all')}>{t('all')}</button>
+        {data.sections.map((s) => (
+          <button type="button" key={s.id} className={section === s.id ? 'chip on' : 'chip'} onClick={() => setSection(s.id)}>{s.name}</button>
         ))}
       </div>
       {list.length > 0 && (
@@ -157,8 +172,8 @@ export default function Custom({ data, spec }) {
             <span>{v.title}</span>
           </label>
         ))}
-        {!list.length && <p className="pv-meta">{t('pravachanNoResults')}</p>}
+        {!list.length && <p className="admin-note">{t('pravachanNoResults')}</p>}
       </div>
-    </div>
+    </section>
   );
 }
