@@ -57,6 +57,7 @@ export default function Home({ data, mode = 'quiz' }) {
               {t('titleMix')}
             </a>
           )}
+          <a className="btn btn-ghost" href="#/custom">{t('customCta')}</a>
           <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">

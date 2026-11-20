@@ -5,7 +5,12 @@ import { Fragment } from 'react';
 const IGNORE = /[‌‍્]/g;
 const JOINERS = /[‌‍]/g;
 
-export const norm = (s) => (s || '').replace(IGNORE, '').toLowerCase();
+// Gujarati digits count as ASCII ones, so "સારંગપુર 10" finds "સારંગપુર ૧૦"
+export const norm = (s) =>
+  (s || '')
+    .replace(IGNORE, '')
+    .replace(/[૦-૯]/g, (d) => String(d.charCodeAt(0) - 0x0ae6))
+    .toLowerCase();
 export const searchTerms = (q) => norm(q).split(/\s+/).filter(Boolean);
 export const matchesAll = (hay, terms) => terms.every((t) => hay.includes(t));
 

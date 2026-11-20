@@ -7,6 +7,7 @@ import Prapti from './components/Prapti.jsx';
 import Admin, { baseId } from './components/Admin.jsx';
 import Pravachan from './components/Pravachan.jsx';
 import Adhiveshan from './components/Adhiveshan.jsx';
+import Custom, { parseSpec, customPool } from './components/Custom.jsx';
 import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
@@ -15,6 +16,7 @@ import { LangContext, makeT } from './i18n.js';
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 //              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
+//              #/custom[/<spec>]  #/custom-quiz/<spec>   (custom quiz from chosen Vachanamrut, see Custom.jsx)
 //              #/adhiveshan[/<n>]   (અધિવેશન પ્રસંગ section: 100 Satsang Prasang, gu/en)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
@@ -68,7 +70,7 @@ export default function App() {
     return { ...rawData, quizzes: rawData.quizzes.filter((q) => !hidden.has(baseId(q.id))) };
   }, [rawData, quizConfig]);
   const L = useMemo(() => makeT(lang), [lang]);
-  const { t } = L;
+  const { t, num } = L;
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +147,28 @@ export default function App() {
         questions: shuffle(pool).slice(0, 20),
       };
     }
+    if (route.page === 'custom-quiz') {
+      // Custom quiz: questions about the chosen Vachanamrut, taken in turns from each
+      // one so every pick is represented, then shuffled. Unscored (id starts "practice").
+      const { nos, kinds, count } = parseSpec(route.arg);
+      const pool = customPool(data.quizzes, nos, kinds);
+      if (!pool.length) return null;
+      const byNo = new Map();
+      for (const q of shuffle(pool)) (byNo.get(q.vachno) || byNo.set(q.vachno, []).get(q.vachno)).push(q);
+      const queues = shuffle([...byNo.values()]);
+      const limit = count === 'all' ? pool.length : Math.min(count, pool.length);
+      const picked = [];
+      for (let i = 0; picked.length < limit; i++) {
+        const queue = queues[i % queues.length];
+        if (queue.length) picked.push(queue.pop());
+      }
+      return {
+        id: 'practice-custom',
+        title: t('customQuizTitle', { n: num(nos.length) }),
+        back: `#/custom/${route.arg}`,
+        questions: shuffle(picked),
+      };
+    }
     if (route.page === 'title-mix') {
       // Mixed title quiz: 20 random title questions across every section (only
       // from title quizzes that are switched on); unscored like practice.
@@ -202,7 +226,9 @@ export default function App() {
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;
   } else if (route.page === 'subjects') {
     content = <Subjects data={data} subjectId={route.arg} />;
-  } else if (route.page === 'practice' || route.page === 'subject-quiz' || route.page === 'title-mix') {
+  } else if (route.page === 'custom') {
+    content = <Custom key={`${lang}-${route.arg}`} data={data} spec={route.arg} />;
+  } else if (['practice', 'subject-quiz', 'title-mix', 'custom-quiz'].includes(route.page)) {
     content = practiceQuiz ? (
       <Quiz
         key={`${lang}-${practiceQuiz.id}-${practiceKey}`}

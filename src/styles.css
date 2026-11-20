@@ -463,3 +463,19 @@ img { -webkit-user-drag: none; }
 .adh-nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 24px 0 8px; }
 .adh-nav .btn { max-width: 100%; white-space: normal; text-align: left; }
 .adh .pv-source a { color: var(--primary); }
+
+/* Custom quiz builder (#/custom) */
+.custom { max-width: 860px; margin: 0 auto; }
+.custom h1 { font-size: 1.5rem; margin: 8px 0; }
+.custom-picked, .custom-options { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; }
+.custom-picked-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.custom-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; max-height: 180px; overflow-y: auto; }
+.custom-options { display: flex; flex-direction: column; gap: 12px; }
+.custom-options .chips { margin: 6px 0 0; }
+.custom-create { display: flex; align-items: center; justify-content: flex-end; gap: 12px; flex-wrap: wrap; }
+.custom-create .btn[disabled] { opacity: .5; cursor: not-allowed; }
+.custom-all { margin: 0 0 8px; }
+.custom-list { display: flex; flex-direction: column; gap: 2px; }
+.custom-list .admin-row.on { background: var(--surface-2); }
+.custom-ref { flex: none; min-width: 9em; color: var(--primary); }
+@media (max-width: 560px) { .custom-list .admin-row { flex-wrap: wrap; } .custom-ref { min-width: 0; } }
