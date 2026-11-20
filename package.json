@@ -14,7 +14,9 @@
     "build-extra": "node scripts/build-extra-source.mjs",
     "build-en": "node scripts/build-en-source.mjs",
     "build-study": "node scripts/build-study-source.mjs",
-    "build-askers": "node scripts/build-askers.mjs"
+    "build-askers": "node scripts/build-askers.mjs",
+    "fetch-adhiveshan": "node scripts/fetch-adhiveshan.mjs",
+    "build-adhiveshan": "node scripts/build-adhiveshan.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

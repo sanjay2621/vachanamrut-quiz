@@ -6,6 +6,7 @@ import Subjects from './components/Subjects.jsx';
 import Prapti from './components/Prapti.jsx';
 import Admin, { baseId } from './components/Admin.jsx';
 import Pravachan from './components/Pravachan.jsx';
+import Adhiveshan from './components/Adhiveshan.jsx';
 import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
@@ -14,6 +15,7 @@ import { LangContext, makeT } from './i18n.js';
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 //              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
+//              #/adhiveshan[/<n>]   (અધિવેશન પ્રસંગ section: 100 Satsang Prasang, gu/en)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
   return { page: parts[0] || 'home', arg: parts[1] || null, arg2: parts[2] || null };
@@ -80,6 +82,7 @@ export default function App() {
       .then((d) => !cancelled && setData(d))
       .catch((e) => !cancelled && setError(e.message));
     document.documentElement.lang = lang;
+    document.title = makeT(lang).t('appName');
     return () => {
       cancelled = true;
     };
@@ -190,6 +193,8 @@ export default function App() {
     );
   } else if (route.page === 'enabledisablequizes') {
     content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} />;
+  } else if (route.page === 'adhiveshan') {
+    content = <Adhiveshan n={route.arg} />;
   } else if (route.page === 'pravachan') {
     content = <Pravachan id={route.arg} itemKey={route.arg2} />;
   } else if (route.page === 'quiz') {
@@ -221,19 +226,20 @@ export default function App() {
       <div className="app">
         <header className="topbar">
           <a href="#/" className="brand" aria-label={t('appHome')}>
-            <span className="brand-mark">{lang === 'gu' ? 'વ' : 'V'}</span>
+            <span className="brand-mark">{lang === 'gu' ? 'અ' : 'A'}</span>
             <span className="brand-text">
               <strong>{t('appName')}</strong>
-              <small>{lang === 'gu' ? 'Vachanamrut Quiz' : 'વચનામૃત ક્વિઝ'}</small>
+              <small>{t('appAlt')}</small>
             </span>
           </a>
           <nav className="topnav">
-            {/* Two sections: Vachanamrut Quiz and પ્રાપ્તિનો વિચાર */}
+            {/* Three sections: Vachanamrut Quiz, પ્રાપ્તિનો વિચાર, અધિવેશન પ્રસંગ */}
             <span className="sections" role="tablist" aria-label={t('sectionsLabel')}>
-              <a href="#/" className={route.page !== 'prapti' ? 'section on' : 'section'}>{t('sectionQuiz')}</a>
+              <a href="#/" className={!['prapti', 'adhiveshan'].includes(route.page) ? 'section on' : 'section'}>{t('sectionQuiz')}</a>
               <a href="#/prapti" className={route.page === 'prapti' ? 'section on' : 'section'}>{t('sectionPrapti')}</a>
+              <a href="#/adhiveshan" className={route.page === 'adhiveshan' ? 'section on' : 'section'}>{t('sectionAdhiveshan')}</a>
             </span>
-            {route.page !== 'prapti' && (
+            {!['prapti', 'adhiveshan'].includes(route.page) && (
               <>
                 <a href="#/" className={route.page === 'home' ? 'active' : ''}>{t('navQuiz')}</a>
                 <a href="#/subjects" className={route.page === 'subjects' ? 'active' : ''}>{t('navSubjects')}</a>

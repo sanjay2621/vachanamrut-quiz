@@ -1,4 +1,5 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { norm, Highlight, snippet, searchTerms } from '../textSearch.jsx';
 import { useLang } from '../i18n.js';
 import { isAdminUnlocked } from '../storage.js';
 import { CODE_HASH, Gate } from './Admin.jsx';
@@ -8,19 +9,6 @@ import { CODE_HASH, Gate } from './Admin.jsx';
 // Content is static in public/data/pravachan.json: pravachans[] with a subject and
 // sections[] of items ({ type: 'p' | 'quote' | 'prasang', title?, text }).
 // Paragraphs inside an item are split by \n.
-
-// Zero-width joiners and the virama (્) are dropped so સદગુણ finds સદ્‌ગુણ
-const norm = (s) => (s || '').replace(/[‌‍્]/g, '').toLowerCase();
-
-function Highlight({ text, terms }) {
-  if (!terms.length) return text;
-  const clean = text.replace(/[‌‍]/g, '');
-  const esc = terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-  const parts = clean.split(new RegExp(`(${esc.join('|')})`, 'gi'));
-  return parts.map((p, i) =>
-    i % 2 ? <mark key={i}>{p}</mark> : <Fragment key={i}>{p}</Fragment>
-  );
-}
 
 const paragraphs = (text) => text.split('\n');
 
@@ -34,15 +22,6 @@ function flatten(pravachans) {
       )
     );
   return out;
-}
-
-function snippet(text, terms, size = 220) {
-  const n = norm(text);
-  const at = terms.length ? Math.max(0, n.indexOf(terms[0])) : 0;
-  const start = Math.max(0, at - 60);
-  const clean = text.replace(/[‌‍]/g, '');
-  const s = clean.slice(start, start + size);
-  return `${start > 0 ? '…' : ''}${s}${start + size < clean.length ? '…' : ''}`;
 }
 
 export default function Pravachan({ id, itemKey }) {

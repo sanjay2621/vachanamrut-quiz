@@ -13,6 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build-extra` — rebuild `scripts/vachanamrut-source-extra.json` (Gujarati source for the 11 additional Vachanamrut) from the cache
 - `npm run build-study` — rebuild `scripts/study-source.json` (all bold teachings + sabha questions per language, from the cache)
 - `npm run build-en` — rebuild `scripts/vachanamrut-source-en.json` from the cached English text
+- `npm run fetch-adhiveshan` — download the 100 Adhiveshan 2025 Satsang Prasang pages (gu + en) from anirdesh into `scripts/.cache/adhiveshan/` (skips cached, 1 s between requests)
+- `npm run build-adhiveshan` — rebuild `public/data/adhiveshan.json` / `adhiveshan.en.json` from that cache
 
 Full pipeline: `fetch-text` → `tag-subjects` → `build-extra` → `build-en` → `build-study` → `build-askers` → `generate`. Only `generate` is needed when just the generator changes; the committed JSON files are its inputs.
 
@@ -20,7 +22,7 @@ No test runner or linter is configured. The generator's built-in coverage checks
 
 ## Architecture
 
-Static React 18 + Vite site, no backend, no router library. Bilingual: Gujarati (default) and English.
+Static React 18 + Vite site, no backend, no router library. Bilingual: Gujarati (default) and English. The site is named **અક્ષરજ્ઞાન / Aksharjnan** (`appName`/`appAlt` in `i18n.js`, `index.html`, favicon); the header has three sections: Vachanamrut Quiz, પ્રાપ્તિનો વિચાર and અધિવેશન પ્રસંગ.
 
 **Numbering (`scripts/vachnos.mjs`):** shared by every script. `vachno` is anirdesh's number: 1–262 standard, 264–274 the 11 additional Vachanamrut of the BAPS edition (Amdavad 4–8 = 264–268, Ashlali 1 = 269, Jetalpur 1–5 = 270–274; 263 ભૂગોળ-ખગોળ is excluded). `SECTIONS` holds each section's vachno `ranges` (Amdavad is non-contiguous) in BAPS display order; use `sectionOfNo`/`positionOf`, never vachno arithmetic. Askers of the extras are hand-entered in `EXTRA_ASKERS`. The app gets `section` ids on `data.vachanamruts` and `count` on `data.sections`.
 
@@ -51,4 +53,5 @@ Static React 18 + Vite site, no backend, no router library. Bilingual: Gujarati 
 - **Quiz visibility / admin page** (`#/enabledisablequizes`, `components/Admin.jsx`, not linked anywhere): `public/data/quiz-config.json` (`{ disabled: [baseId…] }`, base id = quiz id without the `en-` prefix, so one switch covers both languages). `App.jsx` loads it with `cache: 'no-store'` and drops disabled quizzes from `data.quizzes` before anything renders, so they vanish from Home (empty tabs/section chips hidden), practice, subject pages, the title index and direct `#/quiz/<id>` links; the admin page gets the unfiltered data. The page is gated by an access code checked in the browser against its SHA-256 (`CODE_HASH`; the plain code is not in the repo) — a deterrent only. Save commits the file through the GitHub contents API with a fine-grained token stored only in that browser (`storage.js` admin helpers); Vercel then redeploys. New quizzes are visible by default.
 - **Pravachan library** (`#/pravachan[/<id>[/<itemKey>]]`, `components/Pravachan.jsx`): linked only from the admin page and behind the same access code (session unlock). Content is static in `public/data/pravachan.json` (`pravachans[]`: id, subject, title, subtitle, kind, date, duration, source, `sections[]` of `{heading, items[]}`; item `type` is `p`, `quote` or `prasang` (with `title`), paragraphs split by 
 ). Text is transcribed exactly from the source PDFs. The list page groups by subject; search covers every item across all pravachans (ignores ZWNJ and ્), with subject chips and a prasangs-only filter; results link to `#/pravachan/<id>/<sectionIdx>-<itemIdx>`, which scrolls to and flashes that item. Add a pravachan by appending an object.
+- **અધિવેશન પ્રસંગ section** (`#/adhiveshan[/<n>]`, `components/Adhiveshan.jsx`): the 100 Satsang Prasang of North America Adhiveshan 2025, copied exactly from anirdesh by `scripts/build-adhiveshan.mjs` (title + paragraphs per prasang, categories from the page's side menu; inline tags dropped). One file per language, fetched for the current language. List grouped by the 8 categories, search across titles and text (shared helpers in `src/textSearch.jsx`, also used by the pravachan page), reading view with previous/next and a link to the anirdesh page.
 - Theme: `data-theme` attribute on `<html>`, null means follow system preference; styles in `styles.css`.

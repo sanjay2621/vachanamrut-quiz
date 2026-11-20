@@ -454,3 +454,12 @@ img { -webkit-user-drag: none; }
 .pv-result strong { color: var(--primary); }
 .pv-result span { line-height: 1.7; }
 .pv mark { background: var(--gold); color: var(--primary-ink); border-radius: 3px; padding: 0 2px; }
+
+/* અધિવેશન પ્રસંગ section (#/adhiveshan) */
+.adh-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.adh-list a { display: flex; gap: 12px; align-items: baseline; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); text-decoration: none; line-height: 1.5; }
+.adh-list a:hover { border-color: var(--primary); }
+.adh-no { flex: none; min-width: 2.2em; font-weight: 700; color: var(--primary); }
+.adh-nav { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 24px 0 8px; }
+.adh-nav .btn { max-width: 100%; white-space: normal; text-align: left; }
+.adh .pv-source a { color: var(--primary); }
