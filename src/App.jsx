@@ -201,7 +201,7 @@ export default function App() {
       </div>
     );
   } else if (route.page === 'enabledisablequizes') {
-    content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} />;
+    content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} tab={route.arg} />;
   } else if (route.page === 'adhiveshan') {
     content = <Adhiveshan n={route.arg} />;
   } else if (route.page === 'pravachan') {

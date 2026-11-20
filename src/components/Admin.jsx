@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '../i18n.js';
 import { getAdminToken, setAdminToken, isAdminUnlocked, setAdminUnlocked } from '../storage.js';
 import Custom from './Custom.jsx';
@@ -105,7 +105,9 @@ export function Gate({ onUnlock, title }) {
   );
 }
 
-export default function Admin({ data, config, onSaved }) {
+// Tabs: #/enabledisablequizes (on/off lists) and #/enabledisablequizes/create (builder);
+// the pravachan library is a third tab that links to its own page.
+export default function Admin({ data, config, onSaved, tab }) {
   const { t, num, lang } = useLang();
   const [unlocked, setUnlocked] = useState(() => isAdminUnlocked(CODE_HASH));
   const [token, setToken] = useState(() => getAdminToken());
@@ -116,6 +118,9 @@ export default function Admin({ data, config, onSaved }) {
   const [savedCustom, setSavedCustom] = useState(() => config.custom || []);
   const [customs, setCustoms] = useState(() => config.custom || []);
   const [status, setStatus] = useState(null); // { kind: 'ok' | 'err' | 'busy', msg }
+  // True while there are changes not yet written to GitHub; a later load from
+  // GitHub (e.g. right after pasting the token) must not throw them away
+  const dirty = useRef(false);
 
   // With a token, start from the file on GitHub: the deployed copy can lag a
   // minute behind a save while Vercel rebuilds.
@@ -125,10 +130,17 @@ export default function Admin({ data, config, onSaved }) {
     ghRead(token)
       .then(({ config: c }) => {
         if (cancelled) return;
+        const remoteCustom = c.custom || [];
         setSaved(new Set(c.disabled || []));
-        setDisabled(new Set(c.disabled || []));
-        setSavedCustom(c.custom || []);
-        setCustoms(c.custom || []);
+        setSavedCustom(remoteCustom);
+        if (!dirty.current) {
+          setDisabled(new Set(c.disabled || []));
+          setCustoms(remoteCustom);
+          return;
+        }
+        // Keep unsaved local work: add local special quizzes GitHub doesn't have yet
+        const remoteIds = new Set(remoteCustom.map((x) => x.id));
+        setCustoms((prev) => [...remoteCustom, ...prev.filter((x) => !remoteIds.has(x.id))]);
       })
       .catch((e) => !cancelled && setStatus({ kind: 'err', msg: t('adminLoadFail', { e: e.message }) }));
     return () => {
@@ -164,12 +176,14 @@ export default function Admin({ data, config, onSaved }) {
   const all = quizzes;
   const isOn = (q) => !disabled.has(baseId(q.id));
   const onCount = (list) => list.filter(isOn).length;
-  const setMany = (list, on) =>
-    setDisabled((prev) => {
+  const setMany = (list, on) => {
+    dirty.current = true;
+    return setDisabled((prev) => {
       const next = new Set(prev);
       for (const q of list) on ? next.delete(baseId(q.id)) : next.add(baseId(q.id));
       return next;
     });
+  };
   const customIds = new Set(customs.map((c) => c.id));
   const savedCustomIds = new Set(savedCustom.map((c) => c.id));
   const changed =
@@ -178,13 +192,26 @@ export default function Admin({ data, config, onSaved }) {
     [...customIds].filter((id) => !savedCustomIds.has(id)).length +
     [...savedCustomIds].filter((id) => !customIds.has(id)).length;
 
-  // A new custom quiz starts switched off; enable it in its group, then Save
-  const createCustom = (c) => {
-    setCustoms((prev) => [...prev, c]);
-    setDisabled((prev) => new Set(prev).add(c.id));
+  // The builder saves straight away: the new quiz is either switched on or left off
+  const createCustom = async (c, enable) => {
+    dirty.current = true;
+    const nextCustoms = [...customs, c];
+    const nextDisabled = new Set(disabled);
+    if (enable) nextDisabled.delete(c.id);
+    else nextDisabled.add(c.id);
+    setCustoms(nextCustoms);
+    setDisabled(nextDisabled);
+    const ok = await save(nextCustoms, nextDisabled, enable ? t('customSavedOn') : t('customSavedOff'));
+    if (!ok) {
+      // Undo, so retrying from the (kept) form doesn't add the quiz twice
+      setCustoms(customs);
+      setDisabled(disabled);
+    }
+    return ok;
   };
   const deleteCustom = (id) => {
     if (!window.confirm(t('customDeleteConfirm'))) return;
+    dirty.current = true;
     setCustoms((prev) => prev.filter((c) => c.id !== id));
     setDisabled((prev) => {
       const next = new Set(prev);
@@ -193,20 +220,31 @@ export default function Admin({ data, config, onSaved }) {
     });
   };
 
-  const save = async () => {
-    if (!token) return setStatus({ kind: 'err', msg: t('adminNeedToken') });
+  // Returns true when the file was written
+  const save = async (nextCustoms = customs, nextDisabled = disabled, okMsg = t('adminSaved')) => {
+    if (!token) {
+      setStatus({ kind: 'err', msg: t('adminNeedToken') });
+      return false;
+    }
     setStatus({ kind: 'busy', msg: t('adminSaving') });
+    const ids = new Set(nextCustoms.map((c) => c.id));
     // Drop switches for custom quizzes that no longer exist
-    const next = { disabled: [...disabled].filter((id) => !id.startsWith('custom-') || customIds.has(id)).sort(), custom: customs };
+    const next = {
+      disabled: [...nextDisabled].filter((id) => !id.startsWith('custom-') || ids.has(id)).sort(),
+      custom: nextCustoms,
+    };
     try {
       const { sha } = await ghRead(token);
-      await ghWrite(token, next, sha, `Quiz visibility: ${next.disabled.length} hidden (admin page)`);
+      await ghWrite(token, next, sha, `Quiz visibility: ${next.disabled.length} hidden, ${nextCustoms.length} special (admin page)`);
       setSaved(new Set(next.disabled));
-      setSavedCustom(customs);
+      setSavedCustom(nextCustoms);
+      dirty.current = false;
       onSaved(next);
-      setStatus({ kind: 'ok', msg: t('adminSaved') });
+      setStatus({ kind: 'ok', msg: okMsg });
+      return true;
     } catch (e) {
       setStatus({ kind: 'err', msg: t('adminSaveFail', { e: e.message }) });
+      return false;
     }
   };
 
@@ -219,9 +257,13 @@ export default function Admin({ data, config, onSaved }) {
 
   return (
     <div className="admin">
-      <h1>{t('adminTitle')}</h1>
-      <p className="admin-note">{t('adminIntro')}</p>
-      <p><a className="btn btn-ghost" href="#/pravachan">{t('pravachanOpen')}</a></p>
+      <nav className="chips admin-tabs" aria-label={t('adminTitle')}>
+        <a className={tab !== 'create' ? 'chip on' : 'chip'} href="#/enabledisablequizes">{t('adminTabToggle')}</a>
+        <a className={tab === 'create' ? 'chip on' : 'chip'} href="#/enabledisablequizes/create">{t('adminTabCreate')}</a>
+        <a className="chip" href="#/pravachan">{t('adminTabPravachan')}</a>
+      </nav>
+      <h1>{tab === 'create' ? t('customTitle') : t('adminTitle')}</h1>
+      <p className="admin-note">{tab === 'create' ? t('customIntro') : t('adminIntro')}</p>
 
       <section className="admin-token">
         {token ? (
@@ -255,9 +297,13 @@ export default function Admin({ data, config, onSaved }) {
         )}
       </section>
 
-      {/* Builder first; the long on/off lists below start collapsed (special quizzes open) */}
-      <Custom data={data} onCreate={createCustom} />
-
+      {tab === 'create' ? (
+        <>
+          {status && <p className={`admin-status ${status.kind}`}>{status.msg}</p>}
+          <Custom data={data} onCreate={createCustom} busy={status?.kind === 'busy'} />
+        </>
+      ) : (
+      <>
       <div className="admin-summary">
         <strong>{t('adminVisible', { a: num(onCount(all)), b: num(all.length) })}</strong>
         <OnOff list={all} />
@@ -306,6 +352,8 @@ export default function Admin({ data, config, onSaved }) {
           {t('adminSave')}
         </button>
       </div>
+      </>
+      )}
     </div>
   );
 }

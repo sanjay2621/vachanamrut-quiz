@@ -121,6 +121,11 @@ export default function Pravachan({ id, itemKey }) {
 
   return (
     <div className="pv">
+      <nav className="chips admin-tabs" aria-label={t('adminTitle')}>
+        <a className="chip" href="#/enabledisablequizes">{t('adminTabToggle')}</a>
+        <a className="chip" href="#/enabledisablequizes/create">{t('adminTabCreate')}</a>
+        <a className="chip on" href="#/pravachan">{t('adminTabPravachan')}</a>
+      </nav>
       <h1>{t('pravachanTitle')}</h1>
       <input
         className="search pv-search"

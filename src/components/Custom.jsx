@@ -16,7 +16,7 @@ export const KINDS = [
 ];
 const SIZES = [10, 20, 25, 30, 50, 'all'];
 
-export default function Custom({ data, onCreate }) {
+export default function Custom({ data, onCreate, busy }) {
   const { t, num } = useLang();
   const [picked, setPicked] = useState(() => new Set());
   const [kinds, setKinds] = useState(KINDS.map((k) => k.id));
@@ -63,15 +63,17 @@ export default function Custom({ data, onCreate }) {
     return `${t('customQuizTab')} — ${refs.slice(0, 3).join(', ')}${refs.length > 3 ? ' …' : ''}`;
   };
 
-  const add = () => {
-    onCreate({
+  // Saves to GitHub right away (switched on or off); the form resets only on success
+  const add = async (enable) => {
+    const ok = await onCreate({
       id: `custom-${Date.now().toString(36)}`,
       title: title.trim() || autoTitle(),
       ...(titleEn.trim() ? { titleEn: titleEn.trim() } : {}),
       nos,
       questions: draft.map((q) => q.id),
       created: new Date().toISOString().slice(0, 10),
-    });
+    }, enable);
+    if (!ok) return;
     setPicked(new Set());
     setTitle('');
     setTitleEn('');
@@ -138,7 +140,12 @@ export default function Custom({ data, onCreate }) {
           >
             {draft ? t('customRegenerate') : t('customGenerate')}
           </button>
-          {draft && <button type="button" className="btn btn-primary" onClick={add}>{t('customAdd', { n: num(draft.length) })}</button>}
+          {draft && (
+            <>
+              <button type="button" className="btn btn-ghost" disabled={busy} onClick={() => add(false)}>{t('customSaveOff')}</button>
+              <button type="button" className="btn btn-primary" disabled={busy} onClick={() => add(true)}>{t('customSaveOn', { n: num(draft.length) })}</button>
+            </>
+          )}
         </div>
       </div>
 
