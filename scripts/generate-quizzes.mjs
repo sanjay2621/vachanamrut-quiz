@@ -400,6 +400,59 @@ function build(lang) {
   };
   const badEvidence = [];
   const contentQuizzes = [];
+
+  // Wrong options for content questions. The hand-written ones were often short and generic
+  // next to a long, specific correct quote (correct option was the longest ~78% of the time).
+  // Keep a hand-written wrong option only when its length is close to the correct one; fill
+  // the rest with correct answers of *other* content questions — same Vachanamrut first, then
+  // same section, then any — of similar length, so every option reads like real text.
+  // Never use a candidate found in this question's evidence or overlapping the correct answer.
+  // Uses its own seeded RNG per question so the main RNG sequence (and other quizzes) is untouched.
+  const answerPool = source.flatMap((v) =>
+    (content[v.vachno] || []).map((item) => ({ vachno: v.vachno, sec: sectionOf(v), text: item.options[0] }))
+  );
+  const lengthOk = (a, b, lo, hi) => a.length / b.length >= lo && a.length / b.length <= hi;
+  function contentOptions(v, item, qid) {
+    const correct = item.options[0];
+    const ev = item.evidence.replace(/\s+/g, ' ');
+    let h = 0;
+    for (const ch of qid) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const rand = () => ((h = (h * 1103515245 + 12345) >>> 0) / 2 ** 32);
+    const clash = (t) => t === correct || correct.includes(t) || t.includes(correct) || ev.includes(t);
+    // Same "form" as the correct answer: list vs sentence, ending, word count
+    const words = (t) => t.split(/\s+/).filter(Boolean);
+    const commas = (t) => (t.match(/[,،]/g) || []).length;
+    const ending = (t) => words(t).at(-1)?.slice(-2) || '';
+    const cw = words(correct).length;
+    const shape = (t) =>
+      (Math.min(commas(t), 3) === Math.min(commas(correct), 3) ? 2 : 0) +
+      (ending(t) === ending(correct) ? 1 : 0) +
+      (Math.abs(words(t).length - cw) <= Math.max(1, cw * 0.3) ? 1 : 0);
+    // Hand-written wrong options fit the question's topic: keep them unless much shorter/longer
+    const picked = item.options.slice(1).filter((o) => lengthOk(o, correct, 0.45, 2.2));
+    const tiers = [
+      (c) => c.vachno === v.vachno,
+      (c) => c.vachno !== v.vachno && c.sec === sectionOf(v),
+      (c) => c.sec !== sectionOf(v),
+    ];
+    for (const [lo, hi] of [[0.6, 1.7], [0.45, 2.2]]) {
+      for (const inTier of tiers) {
+        if (picked.length >= 3) break;
+        const cands = answerPool
+          .filter((c) => inTier(c) && lengthOk(c.text, correct, lo, hi) && !clash(c.text) && !picked.includes(c.text))
+          .map((c) => ({ t: c.text, s: shape(c.text), r: rand() }))
+          .sort((a, b) => b.s - a.s || a.r - b.r);
+        for (const c of cands) {
+          if (picked.length >= 3) break;
+          if (!picked.includes(c.t)) picked.push(c.t);
+        }
+      }
+    }
+    // Last resort: the original hand-written options
+    for (const o of item.options.slice(1)) if (picked.length < 3 && !picked.includes(o)) picked.push(o);
+    return [correct, ...picked.slice(0, 3)];
+  }
+
   for (const sec of SECTIONS) {
     const pool = [];
     for (const v of source.filter((x) => sectionOf(x) === sec)) {
@@ -407,7 +460,7 @@ function build(lang) {
         const text = lang === 'gu' ? cacheText(v.vachno) : null;
         if (text && !text.includes(item.evidence.replace(/\s+/g, ' '))) badEvidence.push(`${v.vachno}: ${item.q}`);
         if (new Set(item.options).size !== 4) badEvidence.push(`${v.vachno}: needs 4 distinct options: ${item.q}`);
-        const options = shuffle(item.options);
+        const options = shuffle(contentOptions(v, item, `${v.vachno}-content-${k + 1}`));
         pool.push({
           id: `${v.vachno}-content-${k + 1}`,
           vachno: v.vachno,
