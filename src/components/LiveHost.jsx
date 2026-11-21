@@ -8,6 +8,24 @@ import Podium from './Podium.jsx';
 // screen: pick a quiz → players join with the code on #/live → questions one at a time
 // with a countdown → reveal + leaderboard after each → podium. The host computes scores.
 const HOST_KEY = 'vachanamrut-quiz:live-host';
+// Games this browser created ({ code, title, created }), so they can be reopened or
+// deleted later; only this browser's anonymous user may delete them (database rules).
+const HISTORY_KEY = 'vachanamrut-quiz:live-history';
+const DAY = 24 * 60 * 60 * 1000;
+const readHistory = () => {
+  try {
+    return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+  } catch {
+    return [];
+  }
+};
+const writeHistory = (list) => {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  } catch {
+    /* ignore */
+  }
+};
 const LIMITS = [10, 20, 30];
 const SIZES = [5, 10, 15, 20, 'all'];
 
@@ -29,6 +47,18 @@ export default function LiveHost({ quizzes }) {
   const [now, setNow] = useState(0);
   const ctxRef = useRef(null);
   const revealed = useRef(new Set());
+  const [history, setHistory] = useState(readHistory);
+  const saveHistory = (list) => {
+    writeHistory(list);
+    setHistory(list);
+  };
+
+  // Delete games from Firebase (ignoring ones already gone) and from the history list
+  async function deleteGames(codes) {
+    const ctx = await live();
+    await Promise.all(codes.map((c) => ctx.remove(`games/${c}`).catch(() => {})));
+    saveHistory(readHistory().filter((h) => !codes.includes(h.code)));
+  }
 
   // Setup form
   const [quizId, setQuizId] = useState('');
@@ -50,7 +80,10 @@ export default function LiveHost({ quizzes }) {
           ctx.watch(`${base}/meta`, (m) => {
             if (m && m.hostUid !== ctx.uid) return setError(t('liveNotHost'));
             setMeta(m);
-            if (!m) endLocal();
+            if (!m) {
+              saveHistory(readHistory().filter((h) => h.code !== code));
+              endLocal();
+            }
           }),
           ctx.watch(`${base}/players`, (v) => setPlayers(v || {})),
           ctx.watch(`${base}/answers`, (v) => setAnswers(v || {})),
@@ -107,6 +140,8 @@ export default function LiveHost({ quizzes }) {
     setError('');
     try {
       const ctx = await live();
+      const old = readHistory().filter((h) => Date.now() - h.created > DAY).map((h) => h.code);
+      if (old.length) await deleteGames(old);
       let c = '';
       for (let tries = 0; tries < 10; tries++) {
         c = String(1000 + Math.floor(Math.random() * 9000));
@@ -133,6 +168,7 @@ export default function LiveHost({ quizzes }) {
         /* ignore */
       }
       revealed.current = new Set();
+      saveHistory([{ code: c, title: chosen.title, created: Date.now() }, ...readHistory().filter((h) => h.code !== c)]);
       setCode(c);
     } catch (e) {
       setError(t('liveError', { e: e.message }));
@@ -166,8 +202,19 @@ export default function LiveHost({ quizzes }) {
 
   async function endGame() {
     if (!window.confirm(t('liveEndConfirm'))) return;
-    await ctxRef.current.remove(`games/${code}`).catch(() => {});
+    await deleteGames([code]);
     endLocal();
+  }
+
+  function reopen(c) {
+    try {
+      sessionStorage.setItem(HOST_KEY, c);
+    } catch {
+      /* ignore */
+    }
+    revealed.current = new Set();
+    setError('');
+    setCode(c);
   }
 
   if (!liveEnabled) return <p className="admin-note">{t('liveNotSetUp')}</p>;
@@ -200,6 +247,31 @@ export default function LiveHost({ quizzes }) {
           </div>
         </div>
         <button type="button" className="btn btn-primary" disabled={!chosen} onClick={create}>{t('liveCreate')}</button>
+
+        {history.length > 0 && (
+          <div className="live-history">
+            <div className="live-history-head">
+              <strong>{t('liveHistory')}</strong>
+              <button
+                type="button"
+                className="chip"
+                onClick={() => window.confirm(t('liveDeleteAllConfirm')) && deleteGames(history.map((h) => h.code))}
+              >
+                {t('liveDeleteAll')}
+              </button>
+            </div>
+            <p className="admin-note">{t('liveHistoryNote')}</p>
+            {history.map((h) => (
+              <div key={h.code} className="admin-row">
+                <strong className="live-hcode">{h.code}</strong>
+                <span>{h.title}</span>
+                <small>{new Date(h.created).toLocaleString()}</small>
+                <button type="button" className="chip" onClick={() => reopen(h.code)}>{t('liveOpen')}</button>
+                <button type="button" className="chip" onClick={() => window.confirm(t('liveEndConfirm')) && deleteGames([h.code])}>{t('customDelete')}</button>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     );
   }
@@ -271,7 +343,14 @@ export default function LiveHost({ quizzes }) {
         </div>
       )}
 
-      {meta.state === 'podium' && <Podium board={board} />}
+      {meta.state === 'podium' && (
+        <>
+          <Podium board={board} />
+          <p className="live-podium-actions">
+            <button type="button" className="btn btn-primary" onClick={endGame}>{t('liveEndDelete')}</button>
+          </p>
+        </>
+      )}
     </section>
   );
 }

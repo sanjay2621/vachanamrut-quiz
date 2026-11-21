@@ -539,3 +539,7 @@ button.live-opt:disabled { opacity: .5; cursor: default; }
 .place-3 .podium-block { height: 85px; background: linear-gradient(180deg, #e6a26b, #b06a33); }
 .place-1 .podium-medal { font-size: 3.4rem; }
 .podium-col.me .podium-name { color: var(--primary); text-decoration: underline; }
+.live-history { margin-top: 18px; display: flex; flex-direction: column; gap: 4px; }
+.live-history-head { display: flex; align-items: center; gap: 10px; }
+.live-hcode { color: var(--primary); letter-spacing: .08em; }
+.live-podium-actions { text-align: center; margin-top: 18px; }
