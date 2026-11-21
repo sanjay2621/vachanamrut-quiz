@@ -6,3 +6,8 @@ scripts/.cache
 
 # Local secrets (never commit)
 vqtoken.txt
+
+# Firebase settings (kept out of git; set VITE_FIREBASE_CONFIG in Vercel)
+src/firebaseconfig.txt
+.env.local
+.env*.local

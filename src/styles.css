@@ -492,3 +492,50 @@ img { -webkit-user-drag: none; }
 .admin-builder .custom-list { max-height: 420px; overflow-y: auto; border: 1px solid var(--border); border-radius: 12px; padding: 4px; background: var(--surface-2); }
 .admin-tabs { margin: 8px 0 4px; }
 .admin-tabs a.chip { text-decoration: none; }
+
+/* Live game (host tab + #/live player) */
+.live-setup { display: flex; flex-direction: column; gap: 12px; }
+.live-select { font: inherit; width: 100%; padding: 6px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
+.live-host, .live-play { max-width: 900px; margin: 0 auto; }
+.live-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; font-weight: 600; }
+.live-code strong { font-size: 1.3rem; color: var(--primary); letter-spacing: .1em; }
+.live-lobby, .live-wait { text-align: center; padding: 16px 0; }
+.live-join { font-size: 1.1rem; }
+.live-bigcode { font-size: clamp(4rem, 18vw, 9rem); font-weight: 800; letter-spacing: .12em; color: var(--primary); margin: 8px 0; line-height: 1; }
+.live-names { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 12px 0 20px; }
+.live-question h2 { font-size: clamp(1.2rem, 3.2vw, 2rem); line-height: 1.45; margin: 12px 0 18px; }
+.live-qhead { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-weight: 600; }
+.live-timer { font-size: 2rem; font-weight: 800; color: var(--primary); min-width: 2ch; text-align: center; }
+.live-options { list-style: none; padding: 0; margin: 0 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.live-buttons { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.live-opt { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 16px 18px; border-radius: 14px; color: #fff; font: inherit; font-weight: 600; font-size: 1.05rem; line-height: 1.4; border: 0; text-align: left; }
+button.live-opt { cursor: pointer; min-height: 64px; }
+button.live-opt:disabled { opacity: .5; cursor: default; }
+.live-opt.c0 { background: #c0392b; } .live-opt.c1 { background: #2b6cb0; } .live-opt.c2 { background: #b7791f; } .live-opt.c3 { background: #2f855a; }
+.live-opt.dim { opacity: .35; }
+.live-opt.right { outline: 4px solid var(--gold); }
+.live-count { background: rgba(0,0,0,.25); border-radius: 999px; padding: 2px 10px; }
+.live-sent { text-align: center; font-size: 1.2rem; padding: 24px 0; color: var(--muted); }
+.live-result { font-size: 1.8rem; font-weight: 800; margin: 8px 0; }
+.live-result.ok { color: var(--ok); } .live-result.bad { color: var(--bad); }
+.live-rank { font-size: 1.3rem; font-weight: 700; }
+.live-board { list-style: none; counter-reset: rank; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 6px; }
+.live-board li { display: flex; justify-content: space-between; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+.live-board li.me { border-color: var(--primary); background: var(--surface-2); }
+.live-joinform input { font-size: 1.2rem; }
+@media (max-width: 560px) { .live-options { grid-template-columns: 1fr; } }
+
+/* Podium: gold in the middle and highest, silver left, bronze right */
+.podium { text-align: center; }
+.podium h2 { font-size: 1.8rem; margin: 8px 0 20px; }
+.podium-stand { display: flex; justify-content: center; align-items: flex-end; gap: 10px; margin-bottom: 20px; }
+.podium-col { display: flex; flex-direction: column; align-items: center; gap: 4px; width: min(30%, 200px); }
+.podium-medal { font-size: 2.6rem; line-height: 1; }
+.podium-name { font-size: 1.1rem; word-break: break-word; }
+.podium-score { color: var(--muted); font-weight: 700; }
+.podium-block { width: 100%; border-radius: 12px 12px 0 0; display: flex; align-items: flex-start; justify-content: center; padding-top: 10px; font-size: 2rem; font-weight: 800; color: #3b2a10; }
+.place-1 .podium-block { height: 160px; background: linear-gradient(180deg, #f6d365, #d4a017); }
+.place-2 .podium-block { height: 115px; background: linear-gradient(180deg, #e8e8e8, #a8a9ad); }
+.place-3 .podium-block { height: 85px; background: linear-gradient(180deg, #e6a26b, #b06a33); }
+.place-1 .podium-medal { font-size: 3.4rem; }
+.podium-col.me .podium-name { color: var(--primary); text-decoration: underline; }

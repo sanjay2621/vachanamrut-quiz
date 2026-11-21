@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLang } from '../i18n.js';
 import { getAdminToken, setAdminToken, isAdminUnlocked, setAdminUnlocked } from '../storage.js';
 import Custom from './Custom.jsx';
+import LiveHost from './LiveHost.jsx';
 import { buildCustomQuizzes } from '../customQuizzes.js';
 
 // Hidden admin page (#/enabledisablequizes, not linked anywhere): switch quizzes on/off
@@ -258,12 +259,13 @@ export default function Admin({ data, config, onSaved, tab }) {
   return (
     <div className="admin">
       <nav className="chips admin-tabs" aria-label={t('adminTitle')}>
-        <a className={tab !== 'create' ? 'chip on' : 'chip'} href="#/enabledisablequizes">{t('adminTabToggle')}</a>
+        <a className={!tab ? 'chip on' : 'chip'} href="#/enabledisablequizes">{t('adminTabToggle')}</a>
         <a className={tab === 'create' ? 'chip on' : 'chip'} href="#/enabledisablequizes/create">{t('adminTabCreate')}</a>
+        <a className={tab === 'live' ? 'chip on' : 'chip'} href="#/enabledisablequizes/live">{t('adminTabLive')}</a>
         <a className="chip" href="#/pravachan">{t('adminTabPravachan')}</a>
       </nav>
-      <h1>{tab === 'create' ? t('customTitle') : t('adminTitle')}</h1>
-      <p className="admin-note">{tab === 'create' ? t('customIntro') : t('adminIntro')}</p>
+      <h1>{tab === 'create' ? t('customTitle') : tab === 'live' ? t('liveTitle') : t('adminTitle')}</h1>
+      <p className="admin-note">{tab === 'create' ? t('customIntro') : tab === 'live' ? t('liveIntro') : t('adminIntro')}</p>
 
       <section className="admin-token">
         {token ? (
@@ -297,7 +299,9 @@ export default function Admin({ data, config, onSaved, tab }) {
         )}
       </section>
 
-      {tab === 'create' ? (
+      {tab === 'live' ? (
+        <LiveHost quizzes={quizzes} />
+      ) : tab === 'create' ? (
         <>
           {status && <p className={`admin-status ${status.kind}`}>{status.msg}</p>}
           <Custom data={data} onCreate={createCustom} busy={status?.kind === 'busy'} />

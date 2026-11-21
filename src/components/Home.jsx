@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { getScores } from '../storage.js';
 import { useLang } from '../i18n.js';
+import { liveEnabled } from '../live/live.js';
 
 export default function Home({ data, mode = 'quiz' }) {
   const { t, num } = useLang();
@@ -58,6 +59,7 @@ export default function Home({ data, mode = 'quiz' }) {
               {t('titleMix')}
             </a>
           )}
+          {liveEnabled && <a className="btn btn-ghost" href="#/live">{t('liveJoinCta')}</a>}
           <a className="btn btn-ghost" href="#/titles">{t('viewList')}</a>
         </div>
         <div className="overall">

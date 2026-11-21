@@ -7,6 +7,7 @@ import Prapti from './components/Prapti.jsx';
 import Admin, { baseId } from './components/Admin.jsx';
 import Pravachan from './components/Pravachan.jsx';
 import Adhiveshan from './components/Adhiveshan.jsx';
+import LivePlay from './components/LivePlay.jsx';
 import { buildCustomQuizzes } from './customQuizzes.js';
 import { isAdminUnlocked } from './storage.js';
 import { CODE_HASH } from './components/Admin.jsx';
@@ -18,6 +19,7 @@ import { LangContext, makeT } from './i18n.js';
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
 //              #/pravachan[/<id>[/<itemKey>]]   (pravachan library, linked only from the admin page)
+//              #/live   (join a live game as a player; hosting is an admin tab)
 //              #/adhiveshan[/<n>]   (અધિવેશન પ્રસંગ section: 100 Satsang Prasang, gu/en)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
@@ -202,6 +204,8 @@ export default function App() {
     );
   } else if (route.page === 'enabledisablequizes') {
     content = <Admin key={lang} data={rawData} config={quizConfig} onSaved={setQuizConfig} tab={route.arg} />;
+  } else if (route.page === 'live') {
+    content = <LivePlay />;
   } else if (route.page === 'adhiveshan') {
     content = <Adhiveshan n={route.arg} />;
   } else if (route.page === 'pravachan') {
