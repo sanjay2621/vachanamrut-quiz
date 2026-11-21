@@ -197,5 +197,32 @@
     "var-1",
     "var-2",
     "var-3"
+  ],
+  "custom": [
+    {
+      "id": "custom-mwpvgnrl",
+      "title": "Pramukh",
+      "nos": [
+        1,
+        8,
+        81,
+        225,
+        230,
+        234
+      ],
+      "questions": [
+        "234-study-2",
+        "225-content-1",
+        "1-study-5",
+        "8-content-1",
+        "234-content-2",
+        "230-content-2",
+        "1-content-4",
+        "81-content-5",
+        "225-study-2",
+        "8-content-4"
+      ],
+      "created": "2026-11-21"
+    }
   ]
 }
