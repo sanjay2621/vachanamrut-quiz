@@ -513,6 +513,63 @@ function build(lang) {
   }
   quizzes.push(...mixQuizzes);
 
+  // Ramayan / Mahabharat quizzes (kind 'ramayan' / 'mahabharat', section = Kanda/Parva id) from
+  // scripts/epic-<epic>.json: { epic: {gu,en}, parts: [{id,gu,en}], questions: [{ p, gu: [q, correct,
+  // w1, w2, w3], en: [...] }] }. Written by hand/AI from well-known Valmiki Ramayan / Vyasa
+  // Mahabharat facts; wrong options are of the same kind (people/places/objects of that story).
+  // Options are shuffled with a per-question seed so adding questions never reshuffles others,
+  // and this step runs last so the main RNG sequence is untouched.
+  const epics = {};
+  for (const epic of ['ramayan', 'mahabharat']) {
+    const file = path.join(here, `epic-${epic}.json`);
+    if (!fs.existsSync(file)) continue;
+    const src = readJson(`epic-${epic}.json`);
+    const partIds = new Set(src.parts.map((p) => p.id));
+    const perPart = new Map(src.parts.map((p) => [p.id, []]));
+    const seenQ = new Set();
+    src.questions.forEach((item, k) => {
+      const row = item[lang];
+      if (!partIds.has(item.p)) throw new Error(`[${lang}] ${epic} #${k + 1}: unknown part "${item.p}"`);
+      if (!Array.isArray(row) || row.length !== 5 || new Set(row.slice(1)).size !== 4 || row.some((x) => !String(x).trim())) {
+        throw new Error(`[${lang}] ${epic} #${k + 1}: needs a question and 4 distinct non-empty options: ${JSON.stringify(row)}`);
+      }
+      if (seenQ.has(row[0])) throw new Error(`[${lang}] ${epic} #${k + 1}: duplicate question: ${row[0]}`);
+      seenQ.add(row[0]);
+      const id = `${epic}-${item.p}-q${perPart.get(item.p).length + 1}`;
+      let h = 0;
+      for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      const rand = () => ((h = (h * 1103515245 + 12345) >>> 0) / 2 ** 32);
+      const options = row.slice(1).map((o) => [o, rand()]).sort((a, b) => a[1] - b[1]).map(([o]) => o);
+      const part = src.parts.find((p) => p.id === item.p);
+      perPart.get(item.p).push({
+        id,
+        type: 'epic',
+        question: row[0],
+        options,
+        answer: options.indexOf(row[1]),
+        ref: `${src.epic[lang]} — ${part[lang]}`,
+      });
+    });
+    epics[epic] = {
+      name: src.epic[lang],
+      parts: src.parts.map((p) => ({ id: p.id, name: p[lang], count: perPart.get(p.id).length })).filter((p) => p.count),
+    };
+    for (const p of src.parts) {
+      const qs = perPart.get(p.id);
+      if (!qs.length) continue;
+      chunk(qs).forEach((part, i, all) =>
+        quizzes.push({
+          id: `${L.idPrefix}${epic}-${p.id}-${i + 1}`,
+          kind: epic,
+          section: p.id,
+          title: `${p[lang]} — ${lang === 'gu' ? 'ક્વિઝ' : 'Quiz'}${all.length > 1 ? ` ${i + 1}` : ''}`,
+          covers: [],
+          questions: part,
+        })
+      );
+    }
+  }
+
   const subjects = fs.existsSync(path.join(here, 'subjects.json')) ? readJson('subjects.json') : [];
   const data = {
     generated: new Date().toISOString().slice(0, 10),
@@ -529,6 +586,7 @@ function build(lang) {
       vachnos: [...s.vachnos].sort((a, b) => SECTIONS.indexOf(sectionOfNo(a)) - SECTIONS.indexOf(sectionOfNo(b)) || positionOf(a) - positionOf(b)),
     })),
     quizzes,
+    epics,
   };
   fs.writeFileSync(path.join(here, '..', 'public', 'data', L.out), JSON.stringify(data));
   const total = quizzes.reduce((a, q) => a + q.questions.length, 0);

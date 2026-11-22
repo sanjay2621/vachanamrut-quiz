@@ -125,6 +125,7 @@ export default function Pravachan({ id, itemKey }) {
         <a className="chip" href="#/enabledisablequizes">{t('adminTabToggle')}</a>
         <a className="chip" href="#/enabledisablequizes/create">{t('adminTabCreate')}</a>
         <a className="chip" href="#/enabledisablequizes/live">{t('adminTabLive')}</a>
+        <a className="chip" href="#/enabledisablequizes/suggestions">{t('adminTabSuggestions')}</a>
         <a className="chip on" href="#/pravachan">{t('adminTabPravachan')}</a>
       </nav>
       <h1>{t('pravachanTitle')}</h1>

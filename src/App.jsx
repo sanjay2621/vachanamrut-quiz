@@ -147,7 +147,7 @@ export default function App() {
       if (!subject) return null;
       const inSubject = new Set(subject.vachnos);
       const pool = data.quizzes
-        .filter((q) => !['titles', 'subject', 'custom'].includes(q.kind))
+        .filter((q) => !['titles', 'subject', 'custom', 'ramayan', 'mahabharat'].includes(q.kind))
         .flatMap((q) => q.questions)
         .filter((q) => inSubject.has(q.vachno) && !['date', 'asker'].includes(q.type));
       if (!pool.length) return null;
@@ -176,7 +176,7 @@ export default function App() {
     if (route.page !== 'practice') return null;
     const sec = data.sections.find((s) => s.id === route.arg);
     const pool = data.quizzes
-      .filter((q) => !['titles', 'subject', 'custom'].includes(q.kind) && (!sec || q.section === sec.id))
+      .filter((q) => !['titles', 'subject', 'custom', 'ramayan', 'mahabharat'].includes(q.kind) && (!sec || q.section === sec.id))
       .flatMap((q) => q.questions);
     if (!pool.length) return null;
     return {
@@ -238,7 +238,7 @@ export default function App() {
   } else if (route.page === 'titles') {
     content = <TitleIndex data={data} />;
   } else {
-    content = <Home key={lang} data={data} mode={['titles', 'topics', 'study', 'subject', 'custom'].includes(route.arg) ? route.arg : 'quiz'} />;
+    content = <Home key={lang} data={data} mode={['titles', 'topics', 'study', 'subject', 'custom', 'ramayan', 'mahabharat'].includes(route.arg) ? route.arg : 'quiz'} />;
   }
 
   return (

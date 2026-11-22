@@ -20,6 +20,8 @@ export default function Home({ data, mode = 'quiz' }) {
     { id: 'study', href: '#/home/study', label: 'studyQuiz', sub: 'heroSubStudy' },
     { id: 'subject', href: '#/home/subject', label: 'subjectQuizTab', sub: 'heroSubSubject' },
     { id: 'custom', href: '#/home/custom', label: 'customQuizTab', sub: 'heroSubCustom' },
+    { id: 'ramayan', href: '#/home/ramayan', label: 'ramayanTab', sub: 'heroSubRamayan' },
+    { id: 'mahabharat', href: '#/home/mahabharat', label: 'mahabharatTab', sub: 'heroSubMahabharat' },
   ];
   // Tabs with no visible quizzes (all switched off on the admin page) are hidden
   const MODES = ALL_MODES.filter((m) => m.id === mode || countOf(m.id) > 0);
@@ -33,17 +35,23 @@ export default function Home({ data, mode = 'quiz' }) {
   const visible = isSubject
     ? quizzes.filter((q) => subjectFilter === 'all' || q.subject === subjectFilter)
     : quizzes.filter((q) => section === 'all' || q.section === section);
-  const secById = Object.fromEntries(data.sections.map((s) => [s.id, s]));
+  const epic = data.epics?.[mode];
+  const sectionList = epic ? epic.parts : data.sections;
+  const secById = Object.fromEntries(sectionList.map((s) => [s.id, s]));
   const refByNo = Object.fromEntries(data.vachanamruts.map((v) => [v.vachno, v.ref]));
 
   return (
     <>
       <section className="hero">
-        <p className="hero-kicker">{t('heroKicker')}</p>
-        <h1>{t('heroTitle')}</h1>
+        <p className="hero-kicker">{epic ? t('epicKicker') : t('heroKicker')}</p>
+        <h1>{epic ? epic.name : t('heroTitle')}</h1>
         <p className="hero-sub">{t(current.sub, { n: data.vachanamruts.length })}</p>
         <div className="stats">
-          <div><strong>{num(data.vachanamruts.length)}</strong><span>{t('statVach')}</span></div>
+          {epic ? (
+            <div><strong>{num(epic.parts.length)}</strong><span>{t(mode === 'ramayan' ? 'statKanda' : 'statParva')}</span></div>
+          ) : (
+            <div><strong>{num(data.vachanamruts.length)}</strong><span>{t('statVach')}</span></div>
+          )}
           <div><strong>{num(quizzes.length)}</strong><span>{t('statQuiz')}</span></div>
           <div><strong>{num(totalQ)}</strong><span>{t('statQuestions')}</span></div>
           <div><strong>{num(done)}</strong><span>{t('statDone')}</span></div>
@@ -105,7 +113,7 @@ export default function Home({ data, mode = 'quiz' }) {
         <button role="tab" aria-selected={section === 'all'} className={section === 'all' ? 'chip on' : 'chip'} onClick={() => setSection('all')}>
           {t('all')}
         </button>
-        {data.sections.filter((s) => quizzes.some((q) => q.section === s.id)).map((s) => (
+        {sectionList.filter((s) => quizzes.some((q) => q.section === s.id)).map((s) => (
           <button
             key={s.id}
             role="tab"
@@ -133,9 +141,11 @@ export default function Home({ data, mode = 'quiz' }) {
                 {sc && <span className={`badge ${sc.best >= 80 ? 'good' : sc.best >= 50 ? 'ok' : 'low'}`}>{num(sc.best)}%</span>}
               </div>
               <h3>{isSubject ? q.title : q.title.split('—')[1]?.trim() || q.title}</h3>
-              <p className="card-meta">{t('cardMeta', { q: q.questions.length, v: q.covers.length })}</p>
+              <p className="card-meta">{epic ? t('cardMetaEpic', { q: q.questions.length }) : t('cardMeta', { q: q.questions.length, v: q.covers.length })}</p>
               <p className="card-range">
-                {q.section || isSubject
+                {epic
+                  ? epic.name
+                  : q.section || isSubject
                   ? `${refByNo[q.covers[0]]} … ${refByNo[q.covers[q.covers.length - 1]]}`
                   : q.kind === 'custom' ? t('customCovers', { n: num(q.covers.length) }) : t('mixRange')}
               </p>

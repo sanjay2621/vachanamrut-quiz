@@ -3,6 +3,7 @@ import { useLang } from '../i18n.js';
 import { getAdminToken, setAdminToken, isAdminUnlocked, setAdminUnlocked } from '../storage.js';
 import Custom from './Custom.jsx';
 import LiveHost from './LiveHost.jsx';
+import Suggestions from './Suggestions.jsx';
 import { buildCustomQuizzes } from '../customQuizzes.js';
 
 // Hidden admin page (#/enabledisablequizes, not linked anywhere): switch quizzes on/off
@@ -17,7 +18,7 @@ export const CODE_HASH = '460d7b810b0ab8e55d8519736ed6d40e651a3392e0a0dc1cc798a3
 const REPO = 'sanjay2621/vachanamrut-quiz';
 const BRANCH = 'main';
 const PATH = 'public/data/quiz-config.json';
-const API = `https://api.github.com/repos/${REPO}/contents/${PATH}`;
+const apiFor = (path) => `https://api.github.com/repos/${REPO}/contents/${path}`;
 
 // One switch covers both languages: English quiz ids are the Gujarati ids with "en-"
 export const baseId = (id) => id.replace(/^en-/, '');
@@ -40,22 +41,23 @@ const ghHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
 });
 
-async function ghRead(token) {
-  const r = await fetch(`${API}?ref=${BRANCH}`, { headers: ghHeaders(token), cache: 'no-store' });
-  if (r.status === 404) return { sha: undefined, config: { disabled: [] } };
+// Read/write a JSON file in the repo (default: the quiz config). Also used for video-tags.json.
+export async function ghRead(token, path = PATH, empty = { disabled: [] }) {
+  const r = await fetch(`${apiFor(path)}?ref=${BRANCH}`, { headers: ghHeaders(token), cache: 'no-store' });
+  if (r.status === 404) return { sha: undefined, config: empty };
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
   const j = await r.json();
   return { sha: j.sha, config: JSON.parse(fromB64(j.content.replace(/\n/g, ''))) };
 }
 
-async function ghWrite(token, config, sha, message) {
+export async function ghWrite(token, config, sha, message, path = PATH) {
   const body = {
     message,
     content: toB64(`${JSON.stringify(config, null, 2)}\n`),
     branch: BRANCH,
     ...(sha ? { sha } : {}),
   };
-  const r = await fetch(API, { method: 'PUT', headers: ghHeaders(token), body: JSON.stringify(body) });
+  const r = await fetch(apiFor(path), { method: 'PUT', headers: ghHeaders(token), body: JSON.stringify(body) });
   if (!r.ok) {
     const j = await r.json().catch(() => ({}));
     throw new Error(`GitHub ${r.status}${j.message ? `: ${j.message}` : ''}`);
@@ -69,6 +71,8 @@ const KINDS = [
   { id: 'study', label: 'studyQuiz' },
   { id: 'subject', label: 'subjectQuizTab' },
   { id: 'custom', label: 'customQuizTab' },
+  { id: 'ramayan', label: 'ramayanTab' },
+  { id: 'mahabharat', label: 'mahabharatTab' },
 ];
 
 export function Gate({ onUnlock, title }) {
@@ -262,9 +266,10 @@ export default function Admin({ data, config, onSaved, tab }) {
         <a className={!tab ? 'chip on' : 'chip'} href="#/enabledisablequizes">{t('adminTabToggle')}</a>
         <a className={tab === 'create' ? 'chip on' : 'chip'} href="#/enabledisablequizes/create">{t('adminTabCreate')}</a>
         <a className={tab === 'live' ? 'chip on' : 'chip'} href="#/enabledisablequizes/live">{t('adminTabLive')}</a>
+        <a className={tab === 'suggestions' ? 'chip on' : 'chip'} href="#/enabledisablequizes/suggestions">{t('adminTabSuggestions')}</a>
         <a className="chip" href="#/pravachan">{t('adminTabPravachan')}</a>
       </nav>
-      <h1>{tab === 'create' ? t('customTitle') : tab === 'live' ? t('liveTitle') : t('adminTitle')}</h1>
+      <h1>{tab === 'create' ? t('customTitle') : tab === 'live' ? t('liveTitle') : tab === 'suggestions' ? t('sugTitle') : t('adminTitle')}</h1>
       <p className="admin-note">{tab === 'create' ? t('customIntro') : tab === 'live' ? t('liveIntro') : t('adminIntro')}</p>
 
       <section className="admin-token">
@@ -299,7 +304,9 @@ export default function Admin({ data, config, onSaved, tab }) {
         )}
       </section>
 
-      {tab === 'live' ? (
+      {tab === 'suggestions' ? (
+        <Suggestions />
+      ) : tab === 'live' ? (
         <LiveHost quizzes={quizzes} />
       ) : tab === 'create' ? (
         <>

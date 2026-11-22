@@ -565,3 +565,19 @@ button.live-opt:disabled { opacity: .5; cursor: default; }
 .vid-player-info small { color: var(--muted); }
 .vid-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 .vid .pv-search { margin-top: 4px; }
+
+/* Video suggestions (visitor form + admin tab) */
+.vid-suggest { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+.vid-suggest label { font-weight: 600; font-size: .92rem; }
+.vid-suggest-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.vid-suggest-row input { flex: 1 1 220px; }
+.vid-suggest-row input, .vid-suggest-row select, .sug-body input { font: inherit; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); color: var(--text); min-width: 0; }
+.sug-admin { display: flex; flex-direction: column; gap: 10px; }
+.sug-item { display: flex; gap: 12px; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.sug-item img { width: 140px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 8px; }
+.sug-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.sug-body small { color: var(--muted); }
+.sug-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.sug-uid { display: block; width: 100%; box-sizing: border-box; font: inherit; font-family: monospace; padding: 8px 10px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
+@media (max-width: 560px) { .sug-item { flex-direction: column; } .sug-item img { width: 100%; } }
+.sug-clean { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

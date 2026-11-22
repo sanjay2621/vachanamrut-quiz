@@ -136,10 +136,15 @@ export default function Quiz({ quiz, onNewSet }) {
         {answered && (
           <div className={`feedback ${picked === q.answer ? 'ok' : 'bad'}`}>
             <strong>{picked === q.answer ? t('correctFb') : t('wrongFb')}</strong>
-            <span>
-              {t('vachRef', { r: q.ref, t: q.title })}{' '}
-              <a href={q.link} target="_blank" rel="noreferrer">{t('readVach')}</a>
-            </span>
+            {/* Ramayan / Mahabharat questions cite the Kanda / Parva instead of a Vachanamrut */}
+            {q.type === 'epic' ? (
+              <span>{t('epicRef', { r: q.ref })}</span>
+            ) : (
+              <span>
+                {t('vachRef', { r: q.ref, t: q.title })}{' '}
+                <a href={q.link} target="_blank" rel="noreferrer">{t('readVach')}</a>
+              </span>
+            )}
             {/* Content questions carry the passage that proves the answer */}
             {q.evidence && <span className="evidence">{t('evidence')} “{q.evidence}”</span>}
           </div>

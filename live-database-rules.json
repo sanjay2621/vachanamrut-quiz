@@ -24,6 +24,16 @@
         "scores": { ".read": "auth != null" },
         "secret": { ".read": "auth != null && root.child('games/' + $code + '/meta/hostUid').val() === auth.uid" }
       }
+    },
+    "suggestions": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$id": {
+        ".write": "auth != null && (!data.exists() || root.child('admins').child(auth.uid).val() === true)",
+        ".validate": "!newData.exists() || (newData.child('video').isString() && newData.child('video').val().length === 11 && newData.child('text').isString() && newData.child('text').val().length >= 2 && newData.child('text').val().length <= 300 && newData.child('at').isNumber())"
+      }
+    },
+    "admins": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true"
     }
   }
 }

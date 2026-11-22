@@ -37,7 +37,8 @@ export function live() {
         ref: r,
         get: (path) => db.get(r(path)).then((s) => s.val()),
         set: (path, v) => db.set(r(path), v),
-        update: (path, v) => db.update(r(path), v),
+        update: (path, v) => db.update(path === '/' ? db.ref(database) : r(path), v),
+        push: (path, v) => db.push(r(path), v),
         remove: (path) => db.remove(r(path)),
         // Subscribe to a path; returns the unsubscribe function
         watch: (path, cb) => db.onValue(r(path), (s) => cb(s.val())),

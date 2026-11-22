@@ -50,9 +50,13 @@ export default function Results({ quiz, answers, review, onRetry, onRetryWrong }
               <p className="review-q">{a.q.question}</p>
               <p className="review-bad">{t('yourAnswer', { a: a.q.options[a.picked] })}</p>
               <p className="review-good">{t('rightAnswer', { a: a.q.options[a.q.answer] })}</p>
-              <a href={a.q.link} target="_blank" rel="noreferrer">
-                {t('readRef', { r: a.q.ref, t: a.q.title })}
-              </a>
+              {a.q.type === 'epic' ? (
+                <p className="review-ref">{t('epicRef', { r: a.q.ref })}</p>
+              ) : (
+                <a href={a.q.link} target="_blank" rel="noreferrer">
+                  {t('readRef', { r: a.q.ref, t: a.q.title })}
+                </a>
+              )}
             </div>
           ))}
         </section>

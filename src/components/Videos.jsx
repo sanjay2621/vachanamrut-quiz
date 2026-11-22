@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLang } from '../i18n.js';
 import { norm, searchTerms, matchesAll } from '../textSearch.jsx';
+import { live, liveEnabled } from '../live/live.js';
 
 // આશીર્વાદ વિડિયો section (#/videos[/<view>[/<key>]]): the Guruhari Ashirwad YouTube
 // playlist, from public/data/videos.json (npm run build-videos). Views: by subject (the
@@ -13,6 +14,71 @@ const OCCASION_KEYS = ['gurupurnima', 'diwali', 'newyear', 'janmashtami', 'ramna
 
 const thumb = (id) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 
+// Visitor suggestion (keywords and/or a વિષય) for the playing video → Firebase
+// suggestions/<id>; an admin approves it into public/data/video-tags.json.
+function SuggestBox({ video, subjects, subjName }) {
+  const { t } = useLang();
+  const [text, setText] = useState('');
+  const [subject, setSubject] = useState('');
+  const [state, setState] = useState('');
+  useEffect(() => {
+    setText('');
+    setSubject('');
+    setState('');
+  }, [video]);
+  if (!liveEnabled) return null;
+  const LIMIT_KEY = 'vachanamrut-quiz:sug-sent';
+  const today = new Date().toISOString().slice(0, 10);
+  const sentToday = () => {
+    try {
+      const v = JSON.parse(localStorage.getItem(LIMIT_KEY)) || {};
+      return v.day === today ? v.n : 0;
+    } catch {
+      return 0;
+    }
+  };
+  const send = async (e) => {
+    e.preventDefault();
+    if (sentToday() >= 5) return setState('limit');
+    setState('busy');
+    try {
+      const ctx = await live();
+      await ctx.push('suggestions', {
+        video,
+        text: (text.trim() || subjName[subject] || '').slice(0, 300),
+        ...(subject ? { subject } : {}),
+        at: Date.now(),
+      });
+      try {
+        localStorage.setItem(LIMIT_KEY, JSON.stringify({ day: today, n: sentToday() + 1 }));
+      } catch {
+        /* ignore */
+      }
+      setState('ok');
+      setText('');
+      setSubject('');
+    } catch {
+      setState('err');
+    }
+  };
+  return (
+    <form className="vid-suggest" onSubmit={send}>
+      <label htmlFor="vid-sug">{t('sugLabel')}</label>
+      <div className="vid-suggest-row">
+        <input id="vid-sug" maxLength={300} value={text} placeholder={t('sugPlaceholder')} onChange={(e) => setText(e.target.value)} />
+        <select value={subject} onChange={(e) => setSubject(e.target.value)} aria-label={t('sugSubject')}>
+          <option value="">{t('sugSubject')}</option>
+          {subjects.map((s) => <option key={s.id} value={s.id}>{subjName[s.id]}</option>)}
+        </select>
+        <button type="submit" className="btn btn-ghost" disabled={state === 'busy' || (text.trim().length < 2 && !subject)}>{t('sugSend')}</button>
+      </div>
+      {state === 'ok' && <small className="admin-status ok">{t('sugThanks')}</small>}
+      {state === 'err' && <small className="admin-status err">{t('sugError')}</small>}
+      {state === 'limit' && <small className="admin-status err">{t('sugLimit')}</small>}
+    </form>
+  );
+}
+
 export default function Videos({ data, view: viewArg, sel }) {
   const { t, num, lang, link } = useLang();
   const [lib, setLib] = useState(null);
@@ -22,9 +88,24 @@ export default function Videos({ data, view: viewArg, sel }) {
   const key = sel ? decodeURIComponent(sel) : '';
 
   useEffect(() => {
-    fetch('/data/videos.json')
-      .then((r) => (r.ok ? r.json() : { videos: [], subjects: [] }))
-      .then(setLib)
+    // Approved visitor suggestions (video-tags.json) add keywords and subjects
+    Promise.all([
+      fetch('/data/videos.json').then((r) => (r.ok ? r.json() : { videos: [], subjects: [] })),
+      fetch('/data/video-tags.json', { cache: 'no-store' }).then((r) => (r.ok ? r.json() : {})).catch(() => ({})),
+    ])
+      .then(([d, tags]) => {
+        const subjectIds = new Set(d.subjects.map((s) => s.id));
+        d.videos = d.videos.map((v) => {
+          const tg = tags[v.id];
+          if (!tg) return { ...v, keywords: [] };
+          return {
+            ...v,
+            keywords: tg.keywords || [],
+            subjects: [...new Set([...v.subjects, ...(tg.subjects || []).filter((s) => subjectIds.has(s))])],
+          };
+        });
+        setLib(d);
+      })
       .catch(() => setLib({ videos: [], subjects: [] }));
   }, []);
 
@@ -35,7 +116,7 @@ export default function Videos({ data, view: viewArg, sel }) {
       new Map(
         (lib?.videos || []).map((v) => [
           v.id,
-          norm(`${v.title} ${v.place} ${v.subjects.map((s) => subjName[s]).join(' ')} ${v.vachno ? vByNo.get(v.vachno)?.ref + ' ' + vByNo.get(v.vachno)?.title : ''}`),
+          norm(`${v.title} ${v.place} ${(v.keywords || []).join(' ')} ${v.subjects.map((s) => subjName[s]).join(' ')} ${v.vachno ? vByNo.get(v.vachno)?.ref + ' ' + vByNo.get(v.vachno)?.title : ''}`),
         ])
       ),
     [lib, subjName, vByNo]
@@ -135,10 +216,14 @@ export default function Videos({ data, view: viewArg, sel }) {
                 </a>
               )}
             </span>
+            {playing.keywords?.length > 0 && (
+              <span className="vid-tags">{playing.keywords.map((k) => <span key={k} className="chip">#{k}</span>)}</span>
+            )}
             <span className="vid-actions">
               <a className="btn btn-ghost" href={`https://www.youtube.com/watch?v=${playing.id}`} target="_blank" rel="noreferrer">{t('vidOpenYoutube')}</a>
               <button type="button" className="btn btn-ghost" onClick={() => setPlaying(null)}>{t('vidClose')}</button>
             </span>
+            <SuggestBox video={playing.id} subjects={lib.subjects} subjName={subjName} />
           </div>
         </div>
       )}
