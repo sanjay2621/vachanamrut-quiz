@@ -41,9 +41,20 @@ const ghHeaders = (token) => ({
   Authorization: `Bearer ${token}`,
 });
 
+// Never leave the page stuck on "saving": give up after 30 s
+const ghFetch = (url, opts = {}) => {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 30000);
+  return fetch(url, { ...opts, signal: ctl.signal })
+    .catch((e) => {
+      throw new Error(e.name === 'AbortError' ? 'timeout' : e.message);
+    })
+    .finally(() => clearTimeout(timer));
+};
+
 // Read/write a JSON file in the repo (default: the quiz config). Also used for video-tags.json.
 export async function ghRead(token, path = PATH, empty = { disabled: [] }) {
-  const r = await fetch(`${apiFor(path)}?ref=${BRANCH}`, { headers: ghHeaders(token), cache: 'no-store' });
+  const r = await ghFetch(`${apiFor(path)}?ref=${BRANCH}`, { headers: ghHeaders(token), cache: 'no-store' });
   if (r.status === 404) return { sha: undefined, config: empty };
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
   const j = await r.json();
@@ -57,7 +68,7 @@ export async function ghWrite(token, config, sha, message, path = PATH) {
     branch: BRANCH,
     ...(sha ? { sha } : {}),
   };
-  const r = await fetch(apiFor(path), { method: 'PUT', headers: ghHeaders(token), body: JSON.stringify(body) });
+  const r = await ghFetch(apiFor(path), { method: 'PUT', headers: ghHeaders(token), body: JSON.stringify(body) });
   if (!r.ok) {
     const j = await r.json().catch(() => ({}));
     throw new Error(`GitHub ${r.status}${j.message ? `: ${j.message}` : ''}`);
