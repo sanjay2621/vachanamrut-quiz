@@ -368,7 +368,7 @@ export default function Admin({ data, config, onSaved, tab }) {
         <button
           type="button"
           className="btn btn-primary"
-          onClick={save}
+          onClick={() => save()}
           disabled={!changed || status?.kind === 'busy'}
         >
           {t('adminSave')}
