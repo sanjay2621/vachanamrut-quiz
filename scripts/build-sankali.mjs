@@ -1,13 +1,20 @@
 // Builds public/data/sankali.json (Vachanamrut Sankali: for each theme, every Vachanamrut that
 // talks about it, with the sentence quoted from the cached Gujarati text). Themes and patterns
 // live in sankali-themes.mjs. Needs scripts/.cache (npm run fetch-text).
-// Usage: node scripts/build-sankali.mjs [--report]
+// Themes listed in sankali-reviewed.json were reviewed by hand: only the vachno kept there
+// (passages that really discuss the theme, not passing mentions) are listed, and a kept
+// vachno that no longer matches the pattern is an error. --all ignores the review (for
+// reviewing new candidates after a pattern change).
+// Usage: node scripts/build-sankali.mjs [--report] [--all]
 import fs from 'node:fs';
 import { ALL_VACHNOS } from './vachnos.mjs';
 import { GROUPS, THEMES } from './sankali-themes.mjs';
 
 const MAX_QUOTE = 240;
 const report = process.argv.includes('--report');
+const reviewed = process.argv.includes('--all')
+  ? {}
+  : JSON.parse(fs.readFileSync('scripts/sankali-reviewed.json', 'utf8'));
 
 // Split into sentences after . ? ! (optionally followed by a closing quote)
 const sentencesOf = (text) =>
@@ -56,9 +63,10 @@ const themes = THEMES.map((t) => {
   const re = new RegExp(t.re);
   const withRe = t.with ? new RegExp(t.with) : null;
   const exclude = new Set(t.exclude || []);
+  const keep = Array.isArray(reviewed[t.id]) ? new Set(reviewed[t.id]) : null;
   const items = [];
   for (const no of ALL_VACHNOS) {
-    if (exclude.has(no)) continue;
+    if (exclude.has(no) || (keep && !keep.has(no))) continue;
     const hits = sentences[no].filter((s) => re.test(s) && (!withRe || withRe.test(s)));
     if (hits.length < (t.min || 1) && !(t.add || []).includes(no)) continue;
     if (!hits.length) throw new Error(`${t.id}: added ${no} has no matching sentence`);
@@ -70,8 +78,12 @@ const themes = THEMES.map((t) => {
     const best = hits.reduce((a, s) => (score(s) > score(a) ? s : a), hits[0]);
     items.push({ no, n: hits.length, q: quoteOf(best, re) });
   }
+  if (keep) {
+    const missing = [...keep].filter((no) => !items.some((it) => it.no === no));
+    if (missing.length) throw new Error(`${t.id}: reviewed vachno no longer match: ${missing.join(', ')}`);
+  }
   if (report) console.log(`${t.id.padEnd(16)} ${String(items.length).padStart(3)}`);
-  return { id: t.id, group: t.group, ...(t.subject ? { subject: t.subject } : {}), gu: t.gu, en: t.en, re: t.re, items };
+  return { id: t.id, group: t.group, ...(keep ? { reviewed: true } : {}), ...(t.subject ? { subject: t.subject } : {}), gu: t.gu, en: t.en, re: t.re, items };
 });
 
 const out = { groups: GROUPS, themes };
