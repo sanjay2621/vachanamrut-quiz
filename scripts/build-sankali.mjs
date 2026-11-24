@@ -63,13 +63,27 @@ const themes = THEMES.map((t) => {
   const re = new RegExp(t.re);
   const withRe = t.with ? new RegExp(t.with) : null;
   const exclude = new Set(t.exclude || []);
-  const keep = Array.isArray(reviewed[t.id]) ? new Set(reviewed[t.id]) : null;
+  // Reviewed entries are vachno, or "vachno@words" to quote the sentence containing those words
+  // (for a Vachanamrut that discusses the theme without the pattern's wording)
+  const keep = Array.isArray(reviewed[t.id])
+    ? new Map(reviewed[t.id].map((e) => {
+        const [no, at] = String(e).split('@');
+        return [Number(no), at || null];
+      }))
+    : null;
   const items = [];
   for (const no of ALL_VACHNOS) {
     if (exclude.has(no) || (keep && !keep.has(no))) continue;
     const hits = sentences[no].filter((s) => re.test(s) && (!withRe || withRe.test(s)));
-    if (hits.length < (t.min || 1) && !(t.add || []).includes(no)) continue;
-    if (!hits.length) throw new Error(`${t.id}: added ${no} has no matching sentence`);
+    const at = keep && keep.get(no);
+    if (at) {
+      const s = sentences[no].find((x) => x.includes(at));
+      if (!s) throw new Error(`${t.id}: ${no}@${at} not found in the text`);
+      items.push({ no, n: Math.max(1, hits.length), q: quoteOf(s, new RegExp(at.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))) });
+      continue;
+    }
+    if (!keep && hits.length < (t.min || 1) && !(t.add || []).includes(no)) continue;
+    if (!hits.length) throw new Error(`${t.id}: ${no} has no matching sentence; give it as "${no}@<words from the passage>"`);
     // Quote the sentence that says most about the theme: most pattern hits, then not a
     // question, then reasonably short, then earliest
     const reG = new RegExp(t.re, 'g');
@@ -79,7 +93,7 @@ const themes = THEMES.map((t) => {
     items.push({ no, n: hits.length, q: quoteOf(best, re) });
   }
   if (keep) {
-    const missing = [...keep].filter((no) => !items.some((it) => it.no === no));
+    const missing = [...keep.keys()].filter((no) => !items.some((it) => it.no === no));
     if (missing.length) throw new Error(`${t.id}: reviewed vachno no longer match: ${missing.join(', ')}`);
   }
   if (report) console.log(`${t.id.padEnd(16)} ${String(items.length).padStart(3)}`);
