@@ -17,7 +17,8 @@
     "build-askers": "node scripts/build-askers.mjs",
     "fetch-adhiveshan": "node scripts/fetch-adhiveshan.mjs",
     "build-adhiveshan": "node scripts/build-adhiveshan.mjs",
-    "build-videos": "node scripts/build-videos.mjs"
+    "build-videos": "node scripts/build-videos.mjs",
+    "build-sankali": "node scripts/build-sankali.mjs"
   },
   "dependencies": {
     "firebase": "^10.14.1",

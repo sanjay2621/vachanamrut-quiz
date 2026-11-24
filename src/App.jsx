@@ -9,6 +9,7 @@ import Pravachan from './components/Pravachan.jsx';
 import Adhiveshan from './components/Adhiveshan.jsx';
 import LivePlay from './components/LivePlay.jsx';
 import Videos from './components/Videos.jsx';
+import Sankali from './components/Sankali.jsx';
 import { buildCustomQuizzes } from './customQuizzes.js';
 import { isAdminUnlocked } from './storage.js';
 import { CODE_HASH } from './components/Admin.jsx';
@@ -16,6 +17,7 @@ import { getTheme, setTheme, getLang, setLang } from './storage.js';
 import { LangContext, makeT } from './i18n.js';
 
 // Hash routes: #/  #/home/titles  #/home/topics  #/home/study  #/home/subject  #/quiz/<id>  #/practice/<sectionId|all>  #/titles
+//              #/sankali[/<themeId>] (Vachanamrut Sankali)
 //              #/subjects  #/subjects/<subjectId>  #/subject-quiz/<subjectId>  #/title-mix (20 random titles, all sections)
 //              #/prapti  #/prapti/<from yyyy-mm-dd>   (પ્રાપ્તિનો વિચાર section, one tab per date range)
 //              #/enabledisablequizes   (hidden admin page: quiz visibility, behind an access code)
@@ -220,6 +222,8 @@ export default function App() {
       data.quizzes.find((q) => q.id === route.arg) ||
       (isAdminUnlocked(CODE_HASH) ? fullData.quizzes.find((q) => q.id === route.arg) : null);
     content = quiz ? <Quiz key={quiz.id} quiz={quiz} data={data} /> : notFound;
+  } else if (route.page === 'sankali') {
+    content = <Sankali data={data} themeId={route.arg} />;
   } else if (route.page === 'subjects') {
     content = <Subjects data={data} subjectId={route.arg} />;
   } else if (['practice', 'subject-quiz', 'title-mix'].includes(route.page)) {
@@ -264,6 +268,7 @@ export default function App() {
               <>
                 <a href="#/" className={route.page === 'home' ? 'active' : ''}>{t('navQuiz')}</a>
                 <a href="#/subjects" className={route.page === 'subjects' ? 'active' : ''}>{t('navSubjects')}</a>
+                <a href="#/sankali" className={route.page === 'sankali' ? 'active' : ''}>{t('navSankali')}</a>
                 <a href="#/titles" className={route.page === 'titles' ? 'active' : ''}>{t('navTitles')}</a>
               </>
             )}

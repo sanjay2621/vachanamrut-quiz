@@ -1,0 +1,80 @@
+// Builds public/data/sankali.json (Vachanamrut Sankali: for each theme, every Vachanamrut that
+// talks about it, with the sentence quoted from the cached Gujarati text). Themes and patterns
+// live in sankali-themes.mjs. Needs scripts/.cache (npm run fetch-text).
+// Usage: node scripts/build-sankali.mjs [--report]
+import fs from 'node:fs';
+import { ALL_VACHNOS } from './vachnos.mjs';
+import { GROUPS, THEMES } from './sankali-themes.mjs';
+
+const MAX_QUOTE = 240;
+const report = process.argv.includes('--report');
+
+// Split into sentences after . ? ! (optionally followed by a closing quote)
+const sentencesOf = (text) =>
+  text
+    .split(/\n+/)
+    .flatMap((para) => para.replace(/\s+/g, ' ').trim().split(/(?<=[.?!][”’"]?) +/))
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+// Shorten a long sentence to the clauses around the match
+function quoteOf(sentence, re) {
+  if (sentence.length <= MAX_QUOTE) return sentence;
+  const clauses = sentence.split(/(?<=;) +/);
+  const i = clauses.findIndex((c) => re.test(c));
+  if (i >= 0) {
+    let out = clauses[i];
+    let a = i;
+    let b = i;
+    while (out.length < MAX_QUOTE * 0.6 && (a > 0 || b < clauses.length - 1)) {
+      if (b < clauses.length - 1 && `${out} ${clauses[b + 1]}`.length <= MAX_QUOTE) out = `${out} ${clauses[++b]}`;
+      else if (a > 0 && `${clauses[a - 1]} ${out}`.length <= MAX_QUOTE) out = `${clauses[--a]} ${out}`;
+      else break;
+    }
+    if (out.length <= MAX_QUOTE) return `${a > 0 ? '… ' : ''}${out}${b < clauses.length - 1 ? ' …' : ''}`;
+  }
+  // Window around the match, cut at spaces
+  const m = sentence.match(re);
+  const at = m ? m.index : 0;
+  let s = Math.max(0, at - Math.floor(MAX_QUOTE / 2));
+  let e = Math.min(sentence.length, s + MAX_QUOTE);
+  s = Math.max(0, e - MAX_QUOTE);
+  if (s > 0) s = sentence.indexOf(' ', s) + 1;
+  if (e < sentence.length) e = sentence.lastIndexOf(' ', e);
+  return `${s > 0 ? '… ' : ''}${sentence.slice(s, e)}${e < sentence.length ? ' …' : ''}`;
+}
+
+const sentences = Object.fromEntries(
+  ALL_VACHNOS.map((no) => [no, sentencesOf(fs.readFileSync(`scripts/.cache/${no}.txt`, 'utf8'))]),
+);
+
+const ids = new Set();
+const themes = THEMES.map((t) => {
+  if (ids.has(t.id)) throw new Error(`duplicate theme id ${t.id}`);
+  ids.add(t.id);
+  if (!GROUPS.some((g) => g.id === t.group)) throw new Error(`${t.id}: unknown group ${t.group}`);
+  const re = new RegExp(t.re);
+  const withRe = t.with ? new RegExp(t.with) : null;
+  const exclude = new Set(t.exclude || []);
+  const items = [];
+  for (const no of ALL_VACHNOS) {
+    if (exclude.has(no)) continue;
+    const hits = sentences[no].filter((s) => re.test(s) && (!withRe || withRe.test(s)));
+    if (hits.length < (t.min || 1) && !(t.add || []).includes(no)) continue;
+    if (!hits.length) throw new Error(`${t.id}: added ${no} has no matching sentence`);
+    // Quote the sentence that says most about the theme: most pattern hits, then not a
+    // question, then reasonably short, then earliest
+    const reG = new RegExp(t.re, 'g');
+    const score = (s) =>
+      (s.match(reG) || []).length * 10 + (withRe ? 2 : 0) - (/\?[”’"]?$/.test(s) ? 5 : 0) - (s.length > 400 ? 3 : 0);
+    const best = hits.reduce((a, s) => (score(s) > score(a) ? s : a), hits[0]);
+    items.push({ no, n: hits.length, q: quoteOf(best, re) });
+  }
+  if (report) console.log(`${t.id.padEnd(16)} ${String(items.length).padStart(3)}`);
+  return { id: t.id, group: t.group, ...(t.subject ? { subject: t.subject } : {}), gu: t.gu, en: t.en, re: t.re, items };
+});
+
+const out = { groups: GROUPS, themes };
+fs.writeFileSync('public/data/sankali.json', JSON.stringify(out));
+const links = themes.reduce((a, t) => a + t.items.length, 0);
+console.log(`sankali.json: ${themes.length} themes, ${links} links, ${(fs.statSync('public/data/sankali.json').size / 1024).toFixed(0)} KB`);

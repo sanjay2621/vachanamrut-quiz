@@ -581,3 +581,31 @@ button.live-opt:disabled { opacity: .5; cursor: default; }
 .sug-uid { display: block; width: 100%; box-sizing: border-box; font: inherit; font-family: monospace; padding: 8px 10px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; }
 @media (max-width: 560px) { .sug-item { flex-direction: column; } .sug-item img { width: 100%; } }
 .sug-clean { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* વચનામૃત સાંકળી (#/sankali) */
+.sk-group { margin: 22px 0; }
+.sk-group h2 { font-size: 20px; margin: 0 0 10px; }
+.sk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.sk-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; color: var(--text); text-decoration: none; line-height: 1.45; }
+.sk-card:hover { border-color: var(--primary); }
+.sk-card .card-meta { margin: 0; }
+.sk-secs { margin: 14px 0; }
+.sk-chain { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: sk; }
+.sk-chain li { counter-increment: sk; position: relative; padding: 12px 14px 12px 46px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.sk-chain li::before { content: counter(sk); position: absolute; left: 12px; top: 12px; min-width: 24px; height: 24px; border-radius: 999px; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--primary); color: var(--primary-ink); }
+.sk-chain li:not(:last-child)::after { content: ''; position: absolute; left: 23px; top: 40px; bottom: -11px; width: 2px; background: color-mix(in srgb, var(--primary) 40%, transparent); }
+.sk-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.sk-ref { font-weight: 700; color: var(--primary); }
+.sk-title { color: var(--muted); }
+.sk-quote { margin: 6px 0 0; line-height: 1.7; font-size: 17px; }
+.sk-quote mark { background: color-mix(in srgb, var(--primary) 25%, transparent); color: inherit; border-radius: 3px; padding: 0 1px; }
+.sk-related { margin-top: 28px; }
+.sk-related h2 { font-size: 18px; }
+.sk-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.sk-lines li { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+.sk-line-theme { font-weight: 700; }
+@media (max-width: 560px) {
+  .sk-chain li { padding-left: 40px; }
+  .sk-chain li::before { left: 9px; }
+  .sk-chain li:not(:last-child)::after { left: 20px; }
+}
