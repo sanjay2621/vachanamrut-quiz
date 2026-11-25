@@ -1,0 +1,21 @@
+# topic ids (Gujarati label | English)
+bhido     ભીડો | Hardship endured
+chamatkar ચમત્કાર-અંતર્યામીપણું | Miracles & divine knowing
+gnan      જ્ઞાન-ઉપદેશ | Spiritual teaching
+samjan    સમજણ | Right understanding
+nirmani   નમ્રતા-નિર્માનીપણું | Humility
+het       હેત-વાત્સલ્ય | Love for devotees
+karuna    કરુણા-પરોપકાર | Compassion for all
+seva      સેવા | Service
+dharma    નિયમ-ધર્મ | Firm in niyam & dharma
+guru      ગુરુભક્તિ | Devotion to the Guru
+mahima    મહિમા-નિષ્ઠા | Glory & conviction
+vairagya  વૈરાગ્ય-ત્યાગ | Detachment
+ramuj     રમૂજ-વિનોદ | Humour
+samp      સંપ-સુહૃદભાવ | Unity & goodwill
+kalji     કાળજી-ચીવટ | Care & attention to detail
+prerna    પ્રેરણા-પ્રોત્સાહન | Encouragement
+samaj     સમાજ-ઉત્થાન-વ્યસનમુક્તિ | Social uplift
+bhakti    ભક્તિ-પ્રભુપ્રેમ | Devotion to God
+sahan     સહનશીલતા-ક્ષમા | Tolerance & forgiveness
+utsav     મંદિર-ઉત્સવ | Mandirs & festivals

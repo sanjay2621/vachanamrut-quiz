@@ -10,6 +10,7 @@ import Adhiveshan from './components/Adhiveshan.jsx';
 import LivePlay from './components/LivePlay.jsx';
 import Videos from './components/Videos.jsx';
 import Sankali from './components/Sankali.jsx';
+import Psm from './components/Psm.jsx';
 import { buildCustomQuizzes } from './customQuizzes.js';
 import { isAdminUnlocked } from './storage.js';
 import { CODE_HASH } from './components/Admin.jsx';
@@ -25,6 +26,7 @@ import { LangContext, makeT } from './i18n.js';
 //              #/live   (join a live game as a player; hosting is an admin tab)
 //              #/videos[/<view>[/<key>]]   (આશીર્વાદ વિડિયો section: Guruhari Ashirwad playlist by subject etc.)
 //              #/adhiveshan[/<n>]   (અધિવેશન પ્રસંગ section: 100 Satsang Prasang, gu/en)
+//              #/psm[/<part>-<n> | /topic/<topicId> | /touching]   (PSM જીવનચરિત્ર section: prasangs by topic)
 function parseHash() {
   const parts = window.location.hash.replace(/^#\/?/, '').split('/');
   return { page: parts[0] || 'home', arg: parts[1] || null, arg2: parts[2] || null };
@@ -214,6 +216,8 @@ export default function App() {
     content = <LivePlay />;
   } else if (route.page === 'adhiveshan') {
     content = <Adhiveshan n={route.arg} />;
+  } else if (route.page === 'psm') {
+    content = <Psm arg={route.arg} arg2={route.arg2} />;
   } else if (route.page === 'pravachan') {
     content = <Pravachan id={route.arg} itemKey={route.arg2} />;
   } else if (route.page === 'quiz') {
@@ -257,14 +261,15 @@ export default function App() {
             </span>
           </a>
           <nav className="topnav">
-            {/* Sections: Vachanamrut Quiz, પ્રાપ્તિનો વિચાર, અધિવેશન પ્રસંગ, આશીર્વાદ વિડિયો */}
+            {/* Sections: Vachanamrut Quiz, પ્રાપ્તિનો વિચાર, અધિવેશન પ્રસંગ, PSM જીવનચરિત્ર, આશીર્વાદ વિડિયો */}
             <span className="sections" role="tablist" aria-label={t('sectionsLabel')}>
-              <a href="#/" className={!['prapti', 'adhiveshan', 'videos'].includes(route.page) ? 'section on' : 'section'}>{t('sectionQuiz')}</a>
+              <a href="#/" className={!['prapti', 'adhiveshan', 'psm', 'videos'].includes(route.page) ? 'section on' : 'section'}>{t('sectionQuiz')}</a>
               <a href="#/prapti" className={route.page === 'prapti' ? 'section on' : 'section'}>{t('sectionPrapti')}</a>
               <a href="#/adhiveshan" className={route.page === 'adhiveshan' ? 'section on' : 'section'}>{t('sectionAdhiveshan')}</a>
+              <a href="#/psm" className={route.page === 'psm' ? 'section on' : 'section'}>{t('sectionPsm')}</a>
               <a href="#/videos" className={route.page === 'videos' ? 'section on' : 'section'}>{t('sectionVideos')}</a>
             </span>
-            {!['prapti', 'adhiveshan', 'videos'].includes(route.page) && (
+            {!['prapti', 'adhiveshan', 'psm', 'videos'].includes(route.page) && (
               <>
                 <a href="#/" className={route.page === 'home' ? 'active' : ''}>{t('navQuiz')}</a>
                 <a href="#/subjects" className={route.page === 'subjects' ? 'active' : ''}>{t('navSubjects')}</a>

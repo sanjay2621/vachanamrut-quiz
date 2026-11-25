@@ -464,6 +464,22 @@ img { -webkit-user-drag: none; }
 .adh-nav .btn { max-width: 100%; white-space: normal; text-align: left; }
 .adh .pv-source a { color: var(--primary); }
 
+/* PSM જીવનચરિત્ર section (#/psm) */
+.psm .chips a.chip { text-decoration: none; color: inherit; }
+.psm .chips a.chip.on { color: var(--primary-ink); }
+.psm-topics, .psm-years { margin: 6px 0 10px; }
+.psm-tags { margin: 6px 0 16px; }
+.psm-touch { border-color: #c0392b; color: #c0392b !important; }
+.psm-heart { color: #c0392b; }
+.psm-chapter { font-weight: 400; color: var(--muted); font-size: .95rem; }
+.psm-item { display: flex; flex-direction: column; gap: 2px; }
+.psm-item small { color: var(--muted); font-size: .82rem; }
+.psm-today { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 14px; padding: 14px 18px; border-radius: var(--radius); border: 1px solid var(--border); border-left: 4px solid #c0392b; background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow); }
+.psm-today:hover { border-color: var(--primary); }
+.psm-today small { color: #c0392b; font-weight: 700; }
+.psm-today strong { font-size: 1.15rem; color: var(--primary); line-height: 1.45; }
+.psm-today span { color: var(--muted); font-size: .9rem; }
+
 /* Custom quiz builder (inside the admin page) */
 .custom { max-width: 860px; margin: 0 auto; }
 .custom h1 { font-size: 1.5rem; margin: 8px 0; }
