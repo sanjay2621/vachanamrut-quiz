@@ -6,6 +6,11 @@ here = os.path.dirname(os.path.abspath(__file__))
 out_dir = sys.argv[1]
 PART = 3
 b = json.load(open(os.path.join(here, 'psm-build.json'), encoding='utf8'))
+# word-by-word proofreading against the page images (scripts/psm/part<N>/proof.txt, see proofing.py)
+repo = os.path.abspath(os.path.join(out_dir, '..', '..'))
+sys.path.insert(0, os.path.join(repo, 'scripts', 'psm'))
+from proofing import apply_proof
+print('proof corrections', apply_proof(b['out'], os.path.join(repo, 'scripts', 'psm', f'part{PART}', 'proof.txt')))
 idx_path = os.path.join(out_dir, 'psm.json')
 idx = json.load(open(idx_path, encoding='utf8')) if os.path.exists(idx_path) else {'parts': [], 'years': [], 'topics': [], 'prasangs': []}
 

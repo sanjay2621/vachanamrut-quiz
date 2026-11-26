@@ -28,6 +28,27 @@ function todayIndex(len) {
   return len ? (days * 7919) % len : 0;
 }
 
+// Paragraph markers from the proofreading: "§ " = a sub-heading printed inside the prasang,
+// "> " = verse, its lines separated by U+2028
+const LS = ' ';
+function Para({ text }) {
+  if (text.startsWith('§ ')) return <h3 className="psm-sub" lang="gu">{text.slice(2)}</h3>;
+  if (text.startsWith('> ')) {
+    const lines = text.slice(2).split(LS);
+    return (
+      <p className="pv-p psm-verse" lang="gu">
+        {lines.map((l, i) => (
+          <span key={i}>{l}{i < lines.length - 1 && <br />}</span>
+        ))}
+      </p>
+    );
+  }
+  return <p className="pv-p" lang="gu">{text.split(LS).join(' ')}</p>;
+}
+
+// Plain text of a paragraph (markers dropped) for search and snippets
+const plain = (x) => x.replace(/^[§>] /, '').split(LS).join(' ');
+
 export default function Psm({ arg, arg2 }) {
   const { t, num, lang } = useLang();
   const [idx, setIdx] = useState(indexCache);
@@ -79,7 +100,7 @@ export default function Psm({ arg, arg2 }) {
     const m = new Map();
     (idx?.prasangs || []).forEach((p) => {
       const paras = texts[p.part]?.[p.id];
-      if (paras) m.set(p.id, norm(`${p.title} ${paras.join(' ')}`));
+      if (paras) m.set(p.id, norm(`${p.title} ${paras.map(plain).join(' ')}`));
     });
     return m;
   }, [idx, texts]);
@@ -112,9 +133,7 @@ export default function Psm({ arg, arg2 }) {
           ))}
         </div>
         {paras ? (
-          paras.map((x, k) => (
-            <p key={k} className="pv-p" lang="gu">{x}</p>
-          ))
+          paras.map((x, k) => <Para key={k} text={x} />)
         ) : (
           <div className="center-msg">{t('loading')}</div>
         )}
@@ -201,7 +220,7 @@ export default function Psm({ arg, arg2 }) {
             {loadingText ? t('loading') : results.length ? t('pravachanResults', { n: num(results.length) }) : t('pravachanNoResults')}
           </p>
           {results.slice(0, 200).map((p) => {
-            const paras = texts[p.part]?.[p.id] || [];
+            const paras = (texts[p.part]?.[p.id] || []).map(plain);
             const para = paras.find((x) => matchesAll(norm(x), terms)) || paras.find((x) => terms.some((w) => norm(x).includes(w))) || paras[0] || '';
             return (
               <a key={p.id} className="pv-result" href={`#/psm/${p.id}`}>
